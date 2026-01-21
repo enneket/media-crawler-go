@@ -1,5 +1,5 @@
 # Binaries
-media-crawler
+/media-crawler
 *.exe
 *.exe~
 *.dll
