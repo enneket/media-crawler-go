@@ -1,0 +1,10 @@
+PLATFORM: "xhs"
+KEYWORDS: "golang,programming"
+# Set to true if you don't have a GUI environment. 
+# If HEADLESS is true, you MUST provide COOKIES below.
+HEADLESS: true
+# Paste your cookie string here (e.g. "a1=...; web_session=...")
+COOKIES: "your_cookie_string_here"
+SAVE_LOGIN_STATE: true
+USER_DATA_DIR: "browser_data/xhs"
+CRAWLER_MAX_SLEEP_SEC: 2

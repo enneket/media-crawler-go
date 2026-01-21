@@ -1,0 +1,29 @@
+# Binaries
+media-crawler
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Data & Config
+browser_data/
+data/
+config.yaml
+
+# Logs
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.trae/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+go.work
