@@ -88,6 +88,8 @@ func (c *XhsCrawler) Start(ctx context.Context) error {
 		return c.runSearchMode()
 	case "detail":
 		return c.runDetailMode()
+	case "creator":
+		return c.runCreatorMode()
 	default:
 		return fmt.Errorf("unknown crawler type: %s", config.AppConfig.CrawlerType)
 	}
@@ -132,6 +134,38 @@ func (c *XhsCrawler) runDetailMode() error {
 		fmt.Printf("Processing note ID: %s\n", noteId)
 		c.processNote(noteId, "", "")
 		time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+	}
+	return nil
+}
+
+func (c *XhsCrawler) runCreatorMode() error {
+	creatorIds := config.AppConfig.XhsCreatorIdList
+	fmt.Printf("Running creator mode with %d creators\n", len(creatorIds))
+	for _, userId := range creatorIds {
+		fmt.Printf("Processing creator ID: %s\n", userId)
+		cursor := ""
+		for {
+			res, err := c.client.GetNotesByCreator(userId, cursor)
+			if err != nil {
+				fmt.Printf("Failed to get notes for creator %s: %v\n", userId, err)
+				break
+			}
+
+			fmt.Printf("Found %d notes for creator %s\n", len(res.Notes), userId)
+			for _, note := range res.Notes {
+				fmt.Printf("- [%s] %s (ID: %s)\n", note.User.Nickname, note.Title, note.NoteId)
+				c.processNote(note.NoteId, note.XsecSource, note.XsecToken)
+				
+				// Random sleep between notes
+				time.Sleep(time.Duration(1+time.Now().Unix()%2) * time.Second)
+			}
+
+			if !res.HasMore || res.Cursor == "" {
+				break
+			}
+			cursor = res.Cursor
+			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+		}
 	}
 	return nil
 }

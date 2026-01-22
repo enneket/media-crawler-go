@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/platform/douyin"
 	"media-crawler-go/internal/platform/xhs"
 	"os"
 )
@@ -26,6 +27,9 @@ func main() {
 	switch config.AppConfig.Platform {
 	case "xhs":
 		crawler := xhs.NewCrawler()
+		err = crawler.Start(ctx)
+	case "dy", "douyin":
+		crawler := douyin.NewCrawler()
 		err = crawler.Start(ctx)
 	default:
 		log.Fatalf("Platform %s not implemented", config.AppConfig.Platform)

@@ -38,6 +38,10 @@ type Config struct {
 	SortType              string   `mapstructure:"SORT_TYPE"`
 	XhsSpecifiedNoteUrls  []string `mapstructure:"XHS_SPECIFIED_NOTE_URL_LIST"`
 	XhsCreatorIdList      []string `mapstructure:"XHS_CREATOR_ID_LIST"`
+
+	// Douyin Specific
+	DouyinSpecifiedNoteUrls []string `mapstructure:"DY_SPECIFIED_NOTE_URL_LIST"`
+	DouyinCreatorIdList     []string `mapstructure:"DY_CREATOR_ID_LIST"`
 }
 
 var AppConfig Config

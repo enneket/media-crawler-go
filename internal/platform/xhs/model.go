@@ -120,6 +120,12 @@ type SearchResult struct {
 	Items   []SearchItem `json:"items"`
 }
 
+type CreatorNotesResult struct {
+	HasMore bool   `json:"has_more"`
+	Cursor  string `json:"cursor"`
+	Notes   []Note `json:"notes"`
+}
+
 type SearchItem struct {
 	Id         string `json:"id"`
 	XsecSource string `json:"xsec_source"`

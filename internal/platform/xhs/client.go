@@ -127,6 +127,49 @@ func (c *Client) GetNoteByKeyword(keyword string, page int) (*SearchResult, erro
 	return &resp.Data, nil
 }
 
+func (c *Client) GetNotesByCreator(userId, cursor string) (*CreatorNotesResult, error) {
+	uri := "/api/sns/web/v1/user_posted"
+	params := map[string]string{
+		"user_id":       userId,
+		"cursor":        cursor,
+		"num":           "30",
+		"image_formats": "jpg,webp,avif",
+	}
+
+	headers, err := c.preHeaders(uri, params, "GET")
+	if err != nil {
+		return nil, err
+	}
+
+	type Response struct {
+		Success bool               `json:"success"`
+		Code    int                `json:"code"`
+		Msg     string             `json:"msg"`
+		Data    CreatorNotesResult `json:"data"`
+	}
+
+	var resp Response
+	r, err := c.HttpClient.R().
+		SetHeaders(headers).
+		SetQueryParams(params).
+		SetResult(&resp).
+		Get(uri)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if r.IsError() {
+		return nil, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+	}
+
+	if !resp.Success {
+		return nil, fmt.Errorf("api error: %s", resp.Msg)
+	}
+
+	return &resp.Data, nil
+}
+
 func (c *Client) GetNoteById(noteId, xsecSource, xsecToken string) (*Note, error) {
 	if xsecSource == "" {
 		xsecSource = "pc_search"
