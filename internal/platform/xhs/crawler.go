@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/downloader"
 	"media-crawler-go/internal/store"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ type XhsCrawler struct {
 	page        playwright.Page
 	client      *Client
 	signer      *Signer
+	downloader  *downloader.Downloader
 }
 
 func NewCrawler() *XhsCrawler {
@@ -27,7 +29,7 @@ func NewCrawler() *XhsCrawler {
 
 func (c *XhsCrawler) Start(ctx context.Context) error {
 	fmt.Println("XhsCrawler started...")
-	
+
 	if err := c.initBrowser(); err != nil {
 		return err
 	}
@@ -35,6 +37,7 @@ func (c *XhsCrawler) Start(ctx context.Context) error {
 
 	c.signer = NewSigner(c.page)
 	c.client = NewClient(c.signer)
+	c.downloader = downloader.NewDownloader("data/xhs/media")
 
 	// Inject cookies from config if present
 	if config.AppConfig.Cookies != "" {
@@ -70,10 +73,6 @@ func (c *XhsCrawler) Start(ctx context.Context) error {
 	// Check login
 	if !c.client.Pong() {
 		fmt.Println("Not logged in. Please log in manually in the browser window.")
-		// Wait for login? 
-		// For now, we just wait a bit or prompt.
-		// Since we can't easily prompt in this environment, we might fail or wait loop.
-		// But let's assume we might have cookies or we wait.
 		time.Sleep(5 * time.Second)
 		if err := c.client.UpdateCookies(c.browser); err != nil {
 			return err
@@ -84,6 +83,17 @@ func (c *XhsCrawler) Start(ctx context.Context) error {
 	}
 	fmt.Println("Login successful!")
 
+	switch config.AppConfig.CrawlerType {
+	case "search":
+		return c.runSearchMode()
+	case "detail":
+		return c.runDetailMode()
+	default:
+		return fmt.Errorf("unknown crawler type: %s", config.AppConfig.CrawlerType)
+	}
+}
+
+func (c *XhsCrawler) runSearchMode() error {
 	keywords := config.GetKeywords()
 	for _, keyword := range keywords {
 		fmt.Printf("Searching for keyword: %s\n", keyword)
@@ -92,67 +102,143 @@ func (c *XhsCrawler) Start(ctx context.Context) error {
 			fmt.Printf("Search failed: %v\n", err)
 			continue
 		}
-		
+
 		fmt.Printf("Found %d items\n", len(res.Items))
 		for _, item := range res.Items {
-			fmt.Printf("- [%s] %s (ID: %s)\n", item.NoteCard.User.Nickname, item.NoteCard.Title, item.Id)
-			
-			// 1. Get Note Detail
 			noteId := item.Id
 			if noteId == "" {
 				noteId = item.NoteCard.NoteId
 			}
-			
-			// We need to use the token from the search result to get details?
-			// Python code uses: note_detail = await self.xhs_client.get_note_by_id(note_id, xsec_source, xsec_token)
-			// item has XsecToken and XsecSource
-			
-			fmt.Printf("  Fetching detail for note %s...\n", noteId)
-			noteDetail, err := c.client.GetNoteById(noteId, item.XsecSource, item.XsecToken)
-			if err != nil {
-				fmt.Printf("  Failed to get note detail: %v\n", err)
-				// Fallback to HTML parsing if needed? Not implemented yet.
-			} else {
-				// Save Note
-				if err := store.SaveNote(noteDetail); err != nil {
-					fmt.Printf("  Failed to save note: %v\n", err)
-				} else {
-					fmt.Printf("  Note saved.\n")
-				}
-			}
-
-			// 2. Get Comments
-			if config.AppConfig.EnableGetComments {
-				fmt.Printf("  Fetching comments for note %s...\n", noteId)
-				// For comments, we need xsec_token. If GetNoteById returned detail, it might have refreshed token?
-				// But usually we use the one from list or detail.
-				// Python: await self.batch_get_note_comments(note_ids, xsec_tokens)
-				
-				commentsRes, err := c.client.GetNoteComments(noteId, item.XsecToken, "")
-				if err != nil {
-					fmt.Printf("  Failed to get comments: %v\n", err)
-				} else {
-					fmt.Printf("  Found %d comments\n", len(commentsRes.Comments))
-					// Save Comments
-					// We might want to wrap them with noteId
-					data := map[string]interface{}{
-						"note_id": noteId,
-						"comments": commentsRes.Comments,
-					}
-					if err := store.SaveComments(data); err != nil {
-						fmt.Printf("  Failed to save comments: %v\n", err)
-					}
-				}
-			}
+			fmt.Printf("- [%s] %s (ID: %s)\n", item.NoteCard.User.Nickname, item.NoteCard.Title, noteId)
+			c.processNote(noteId, item.XsecSource, item.XsecToken)
 			
 			// Random sleep between notes
-			time.Sleep(time.Duration(1 + time.Now().Unix()%2) * time.Second)
+			time.Sleep(time.Duration(1+time.Now().Unix()%2) * time.Second)
 		}
-		
 		time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
 	}
-	
 	return nil
+}
+
+func (c *XhsCrawler) runDetailMode() error {
+	urls := config.AppConfig.XhsSpecifiedNoteUrls
+	fmt.Printf("Running detail mode with %d urls\n", len(urls))
+	for _, url := range urls {
+		noteId := extractNoteId(url)
+		if noteId == "" {
+			fmt.Printf("Invalid URL: %s\n", url)
+			continue
+		}
+		fmt.Printf("Processing note ID: %s\n", noteId)
+		c.processNote(noteId, "", "")
+		time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+	}
+	return nil
+}
+
+func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
+	fmt.Printf("  Fetching detail for note %s...\n", noteId)
+	noteDetail, err := c.client.GetNoteById(noteId, xsecSource, xsecToken)
+	if err != nil {
+		fmt.Printf("  Failed to get note detail: %v\n", err)
+		return
+	}
+
+	// Save Note
+	if err := store.SaveNote(noteDetail); err != nil {
+		fmt.Printf("  Failed to save note: %v\n", err)
+	} else {
+		fmt.Printf("  Note saved.\n")
+	}
+
+	// Download Medias
+	if config.AppConfig.EnableGetMedias {
+		var urls []string
+		var filenames []string
+
+		// Images
+		for i, img := range noteDetail.ImageList {
+			url := img.UrlDefault
+			if url == "" {
+				url = img.Url
+			}
+			if url != "" {
+				urls = append(urls, url)
+				ext := "jpg"
+				if strings.Contains(url, ".webp") {
+					ext = "webp"
+				} else if strings.Contains(url, ".png") {
+					ext = "png"
+				}
+				filenames = append(filenames, fmt.Sprintf("%s_%d.%s", noteDetail.NoteId, i, ext))
+			}
+		}
+
+		// Video
+		if noteDetail.Type == "video" && noteDetail.Video.Media.Stream != nil {
+			if streams, ok := noteDetail.Video.Media.Stream["h264"]; ok && len(streams) > 0 {
+				url := streams[0].MasterUrl
+				if url != "" {
+					urls = append(urls, url)
+					filenames = append(filenames, fmt.Sprintf("%s_video.mp4", noteDetail.NoteId))
+				}
+			}
+		}
+
+		if len(urls) > 0 {
+			fmt.Printf("  Downloading %d media files...\n", len(urls))
+			c.downloader.BatchDownload(urls, filenames)
+		}
+	}
+
+	// Get Comments
+	if config.AppConfig.EnableGetComments {
+		// If we don't have token (e.g. detail mode), GetNoteById response contains token?
+		// Note struct has XsecToken field.
+		token := xsecToken
+		if token == "" {
+			token = noteDetail.XsecToken
+		}
+		
+		fmt.Printf("  Fetching comments for note %s...\n", noteId)
+		commentsRes, err := c.client.GetNoteComments(noteId, token, "")
+		if err != nil {
+			fmt.Printf("  Failed to get comments: %v\n", err)
+		} else {
+			fmt.Printf("  Found %d comments\n", len(commentsRes.Comments))
+			if config.AppConfig.SaveDataOption == "csv" {
+				for _, comment := range commentsRes.Comments {
+					comment.NoteId = noteId
+					if err := store.SaveComments(&comment); err != nil {
+						fmt.Printf("  Failed to save comment CSV: %v\n", err)
+					}
+				}
+			} else {
+				data := map[string]interface{}{
+					"note_id":  noteId,
+					"comments": commentsRes.Comments,
+				}
+				if err := store.SaveComments(data); err != nil {
+					fmt.Printf("  Failed to save comments: %v\n", err)
+				}
+			}
+		}
+	}
+}
+
+func extractNoteId(url string) string {
+	// Simple regex or split
+	// https://www.xiaohongshu.com/explore/64a...
+	parts := strings.Split(url, "/")
+	if len(parts) > 0 {
+		last := parts[len(parts)-1]
+		// Remove query params
+		if idx := strings.Index(last, "?"); idx != -1 {
+			last = last[:idx]
+		}
+		return last
+	}
+	return ""
 }
 
 func (c *XhsCrawler) initBrowser() error {
@@ -172,7 +258,6 @@ func (c *XhsCrawler) initBrowser() error {
 		return fmt.Errorf("could not resolve absolute path for user data dir: %v", err)
 	}
 
-	// Ensure directory exists (Playwright might create it, but good to be safe)
 	if _, err := os.Stat(userDataDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(userDataDir, 0755); err != nil {
 			return fmt.Errorf("could not create user data dir: %v", err)
@@ -181,11 +266,10 @@ func (c *XhsCrawler) initBrowser() error {
 
 	browser, err := pw.Chromium.LaunchPersistentContext(userDataDir, playwright.BrowserTypeLaunchPersistentContextOptions{
 		Headless: playwright.Bool(config.AppConfig.Headless),
-		Channel:  playwright.String("chrome"), // Try to use installed chrome if available, or default
+		Channel:  playwright.String("chrome"),
 		Viewport: &playwright.Size{Width: 1920, Height: 1080},
 	})
 	if err != nil {
-		// Fallback to bundled chromium if chrome not found
 		browser, err = pw.Chromium.LaunchPersistentContext(userDataDir, playwright.BrowserTypeLaunchPersistentContextOptions{
 			Headless: playwright.Bool(config.AppConfig.Headless),
 			Viewport: &playwright.Size{Width: 1920, Height: 1080},
@@ -206,10 +290,7 @@ func (c *XhsCrawler) initBrowser() error {
 		}
 		c.page = page
 	}
-	
-	// Inject stealth?
-	// Playwright-go doesn't have stealth built-in.
-	// We can inject scripts.
+
 	c.page.AddInitScript(playwright.Script{Content: playwright.String("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")})
 
 	return nil
