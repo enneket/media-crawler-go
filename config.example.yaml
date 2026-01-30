@@ -20,6 +20,9 @@ ENABLE_GET_MEDIAS: false
 # Douyin (detail mode, optional)
 # DY_SPECIFIED_NOTE_URL_LIST:
 #   - "https://www.douyin.com/video/7525082444551310602"
+# Douyin (creator mode, optional)
+# DY_CREATOR_ID_LIST:
+#   - "https://www.douyin.com/user/MS4wLjABAAAA..."
 # Set to true if you don't have a GUI environment. 
 # If HEADLESS is true, you MUST provide COOKIES below.
 HEADLESS: true

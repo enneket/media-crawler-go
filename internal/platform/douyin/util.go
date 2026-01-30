@@ -10,6 +10,7 @@ import (
 
 var (
 	reVideoID = regexp.MustCompile(`/video/(\d+)`)
+	reUserID  = regexp.MustCompile(`/user/([^/?]+)`)
 )
 
 func ExtractAwemeID(input string) string {
@@ -31,6 +32,26 @@ func ExtractAwemeID(input string) string {
 		if strings.Contains(u.Host, "v.douyin.com") {
 			return ""
 		}
+	}
+	return ""
+}
+
+func ExtractSecUserID(input string) string {
+	s := strings.TrimSpace(input)
+	if s == "" {
+		return ""
+	}
+	if strings.HasPrefix(s, "MS4wLjABAAAA") && !strings.Contains(s, "/") {
+		return s
+	}
+	u, err := url.Parse(s)
+	if err == nil {
+		if m := reUserID.FindStringSubmatch(u.Path); len(m) == 2 {
+			return m[1]
+		}
+	}
+	if !strings.HasPrefix(s, "http") && !strings.Contains(s, "douyin.com") && !strings.Contains(s, "/") {
+		return s
 	}
 	return ""
 }

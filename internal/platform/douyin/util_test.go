@@ -20,3 +20,20 @@ func TestExtractAwemeID(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractSecUserID(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"MS4wLjABAAAATJPY7LAlaa5X", "MS4wLjABAAAATJPY7LAlaa5X"},
+		{"https://www.douyin.com/user/MS4wLjABAAAATJPY7LAlaa5X?from_tab_name=main", "MS4wLjABAAAATJPY7LAlaa5X"},
+		{"", ""},
+	}
+	for _, c := range cases {
+		got := ExtractSecUserID(c.in)
+		if got != c.want {
+			t.Fatalf("ExtractSecUserID(%q)=%q want %q", c.in, got, c.want)
+		}
+	}
+}

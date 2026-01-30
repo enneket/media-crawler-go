@@ -73,8 +73,12 @@ func (c *DouyinCrawler) Start(ctx context.Context) error {
 	switch config.AppConfig.CrawlerType {
 	case "detail":
 		return c.runDetailMode(ctx)
+	case "creator":
+		return c.runCreatorMode(ctx)
+	case "search":
+		return c.runSearchMode(ctx)
 	default:
-		return fmt.Errorf("douyin crawler type not implemented: %s (supported: detail)", config.AppConfig.CrawlerType)
+		return fmt.Errorf("douyin crawler type not implemented: %s (supported: search/detail/creator)", config.AppConfig.CrawlerType)
 	}
 }
 
@@ -257,130 +261,266 @@ func (c *DouyinCrawler) runDetailMode(ctx context.Context) error {
 	}
 
 	for _, input := range inputs {
-		awemeID := ExtractAwemeID(input)
-		if awemeID == "" && strings.Contains(input, "v.douyin.com") {
-			finalURL, err := ResolveShortURL(input)
-			if err == nil {
-				awemeID = ExtractAwemeID(finalURL)
-			}
-		}
+		awemeID := resolveAwemeID(input)
 		if awemeID == "" {
 			fmt.Printf("Skip invalid douyin url/id: %s\n", input)
 			continue
 		}
-
-		fmt.Printf("Fetching aweme_id: %s\n", awemeID)
-		detail, err := c.client.GetVideoByID(ctx, awemeID, msToken, "")
-		if err != nil {
-			fmt.Printf("Failed to fetch detail %s: %v\n", awemeID, err)
-			continue
-		}
-
-		if config.AppConfig.SaveDataOption == "csv" {
-			var rec VideoDetail
-			b, _ := json.Marshal(detail)
-			_ = json.Unmarshal(b, &rec)
-			if err := store.SaveNoteDetail(awemeID, &rec); err != nil {
-				fmt.Printf("Failed to save CSV %s: %v\n", awemeID, err)
-			}
-		} else {
-			if err := store.SaveNoteDetail(awemeID, detail); err != nil {
-				fmt.Printf("Failed to save %s: %v\n", awemeID, err)
-			}
-		}
-
-		if config.AppConfig.EnableGetComments {
-			comments, err := fetchAllAwemeComments(
-				ctx,
-				c.client,
-				awemeID,
-				config.AppConfig.CrawlerMaxComments,
-				config.AppConfig.CrawlerMaxSleepSec,
-				msToken,
-				config.AppConfig.EnableGetSubComments,
-			)
-			if err != nil {
-				fmt.Printf("Failed to fetch comments %s: %v\n", awemeID, err)
-			} else {
-				if config.AppConfig.SaveDataOption == "csv" {
-					items := make([]any, 0, len(comments))
-					for i := range comments {
-						items = append(items, &comments[i])
-					}
-					_, err := store.AppendUniqueCSV(
-						store.NoteDir(awemeID),
-						"comments.csv",
-						"comments.idx",
-						items,
-						func(item any) (string, error) { return item.(*Comment).CID, nil },
-						(&Comment{}).CSVHeader(),
-						func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
-					)
-					if err != nil {
-						fmt.Printf("Failed to save comments csv %s: %v\n", awemeID, err)
-					}
-				} else {
-					items := make([]any, 0, len(comments))
-					for i := range comments {
-						items = append(items, comments[i])
-					}
-					_, err := store.AppendUniqueJSONL(
-						store.NoteDir(awemeID),
-						"comments.jsonl",
-						"comments.idx",
-						items,
-						func(item any) (string, error) { return item.(Comment).CID, nil },
-					)
-					if err != nil {
-						fmt.Printf("Failed to save comments %s: %v\n", awemeID, err)
-					}
-				}
-			}
-		}
-
-		if config.AppConfig.EnableGetMedias {
-			headers := map[string]string{
-				"User-Agent": c.client.UserAgent(),
-				"Referer":    fmt.Sprintf("https://www.douyin.com/video/%s", awemeID),
-			}
-			if ck := c.client.CookieHeader(); ck != "" {
-				headers["Cookie"] = ck
-			}
-
-			var rec VideoDetail
-			b, _ := json.Marshal(detail)
-			_ = json.Unmarshal(b, &rec)
-
-			var urls []string
-			var filenames []string
-
-			if len(rec.Video.PlayAddr.URLList) > 0 {
-				urls = append(urls, rec.Video.PlayAddr.URLList[0])
-				filenames = append(filenames, fmt.Sprintf("%s_video.mp4", awemeID))
-			}
-
-			coverList := rec.Video.OriginCover.URLList
-			if len(coverList) == 0 {
-				coverList = rec.Video.Cover.URLList
-			}
-			for i, u := range coverList {
-				if u == "" {
-					continue
-				}
-				urls = append(urls, u)
-				filenames = append(filenames, fmt.Sprintf("%s_cover_%d.jpg", awemeID, i))
-				if i >= 2 {
-					break
-				}
-			}
-
-			if len(urls) > 0 {
-				noteDownloader := downloader.NewDownloader(store.NoteMediaDir(awemeID))
-				noteDownloader.BatchDownloadWithHeaders(urls, filenames, headers)
-			}
+		if err := c.processOneAweme(ctx, awemeID, msToken); err != nil {
+			fmt.Printf("Failed to process %s: %v\n", awemeID, err)
 		}
 
 		time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
 	}
+	return nil
+}
+
+func (c *DouyinCrawler) runCreatorMode(ctx context.Context) error {
+	inputs := config.AppConfig.DouyinCreatorIdList
+	fmt.Printf("Running creator mode with %d inputs\n", len(inputs))
+	if len(inputs) == 0 {
+		return fmt.Errorf("DY_CREATOR_ID_LIST is empty")
+	}
+
+	msToken := ""
+	v, err := c.page.Evaluate("() => window.localStorage && window.localStorage.getItem('xmst')")
+	if err == nil {
+		if s, ok := v.(string); ok {
+			msToken = s
+		}
+	}
+
+	for _, input := range inputs {
+		secUserID := ExtractSecUserID(input)
+		if secUserID == "" {
+			fmt.Printf("Skip invalid creator id/url: %s\n", input)
+			continue
+		}
+		fmt.Printf("Fetching creator profile: %s\n", secUserID)
+		profile, err := c.client.GetUserInfo(ctx, secUserID, msToken)
+		if err == nil {
+			_ = store.SaveCreatorProfile(secUserID, profile)
+		} else {
+			fmt.Printf("Failed to fetch creator profile %s: %v\n", secUserID, err)
+		}
+
+		maxCursor := ""
+		hasMore := 1
+		processed := 0
+		limit := config.AppConfig.CrawlerMaxNotesCount
+		for hasMore == 1 && (limit <= 0 || processed < limit) {
+			resp, err := c.client.GetUserAwemePosts(ctx, secUserID, maxCursor, msToken)
+			if err != nil {
+				return err
+			}
+			hasMore = resp.HasMore
+			maxCursor = resp.MaxCursor
+			for _, aweme := range resp.AwemeList {
+				id, _ := aweme["aweme_id"].(string)
+				if id == "" {
+					continue
+				}
+				if err := c.processOneAweme(ctx, id, msToken); err != nil {
+					fmt.Printf("Failed to process %s: %v\n", id, err)
+				}
+				processed++
+				if limit > 0 && processed >= limit {
+					break
+				}
+			}
+			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+		}
+	}
+	return nil
+}
+
+func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
+	keywords := config.GetKeywords()
+	fmt.Printf("Running search mode with %d keywords\n", len(keywords))
+	if len(keywords) == 0 {
+		return fmt.Errorf("KEYWORDS is empty")
+	}
+
+	msToken := ""
+	v, err := c.page.Evaluate("() => window.localStorage && window.localStorage.getItem('xmst')")
+	if err == nil {
+		if s, ok := v.(string); ok {
+			msToken = s
+		}
+	}
+
+	limitCount := 10
+	maxNotes := config.AppConfig.CrawlerMaxNotesCount
+	startPage := config.AppConfig.StartPage
+	if startPage <= 0 {
+		startPage = 1
+	}
+	if maxNotes > 0 && maxNotes < limitCount {
+		limitCount = maxNotes
+	}
+
+	for _, keyword := range keywords {
+		page := 0
+		searchID := ""
+		for maxNotes <= 0 || (page-startPage+1)*limitCount <= maxNotes {
+			if page < startPage {
+				page++
+				continue
+			}
+			offset := page*limitCount - limitCount
+			resp, err := c.client.SearchInfoByKeyword(ctx, keyword, offset, limitCount, searchID)
+			if err != nil {
+				return err
+			}
+			if len(resp.Data) == 0 {
+				break
+			}
+			searchID = resp.Extra.LogID
+
+			for _, item := range resp.Data {
+				aweme := pickAwemeInfoFromSearchItem(item)
+				if aweme == nil {
+					continue
+				}
+				id, _ := aweme["aweme_id"].(string)
+				if id == "" {
+					continue
+				}
+				if err := c.processOneAweme(ctx, id, msToken); err != nil {
+					fmt.Printf("Failed to process %s: %v\n", id, err)
+				}
+			}
+			page++
+			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+		}
+	}
+	return nil
+}
+
+func resolveAwemeID(input string) string {
+	awemeID := ExtractAwemeID(input)
+	if awemeID != "" {
+		return awemeID
+	}
+	if strings.Contains(input, "v.douyin.com") {
+		finalURL, err := ResolveShortURL(input)
+		if err == nil {
+			return ExtractAwemeID(finalURL)
+		}
+	}
+	return ""
+}
+
+func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msToken string) error {
+	fmt.Printf("Fetching aweme_id: %s\n", awemeID)
+	detail, err := c.client.GetVideoByID(ctx, awemeID, msToken, "")
+	if err != nil {
+		return err
+	}
+
+	if config.AppConfig.SaveDataOption == "csv" {
+		var rec VideoDetail
+		b, _ := json.Marshal(detail)
+		_ = json.Unmarshal(b, &rec)
+		if err := store.SaveNoteDetail(awemeID, &rec); err != nil {
+			return err
+		}
+	} else {
+		if err := store.SaveNoteDetail(awemeID, detail); err != nil {
+			return err
+		}
+	}
+
+	if config.AppConfig.EnableGetComments {
+		comments, err := fetchAllAwemeComments(
+			ctx,
+			c.client,
+			awemeID,
+			config.AppConfig.CrawlerMaxComments,
+			config.AppConfig.CrawlerMaxSleepSec,
+			msToken,
+			config.AppConfig.EnableGetSubComments,
+		)
+		if err != nil {
+			fmt.Printf("Failed to fetch comments %s: %v\n", awemeID, err)
+		} else {
+			if config.AppConfig.SaveDataOption == "csv" {
+				items := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, &comments[i])
+				}
+				_, err := store.AppendUniqueCSV(
+					store.NoteDir(awemeID),
+					"comments.csv",
+					"comments.idx",
+					items,
+					func(item any) (string, error) { return item.(*Comment).CID, nil },
+					(&Comment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+				)
+				if err != nil {
+					fmt.Printf("Failed to save comments csv %s: %v\n", awemeID, err)
+				}
+			} else {
+				items := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, comments[i])
+				}
+				_, err := store.AppendUniqueJSONL(
+					store.NoteDir(awemeID),
+					"comments.jsonl",
+					"comments.idx",
+					items,
+					func(item any) (string, error) { return item.(Comment).CID, nil },
+				)
+				if err != nil {
+					fmt.Printf("Failed to save comments %s: %v\n", awemeID, err)
+				}
+			}
+		}
+	}
+
+	if config.AppConfig.EnableGetMedias {
+		headers := map[string]string{
+			"User-Agent": c.client.UserAgent(),
+			"Referer":    fmt.Sprintf("https://www.douyin.com/video/%s", awemeID),
+		}
+		if ck := c.client.CookieHeader(); ck != "" {
+			headers["Cookie"] = ck
+		}
+
+		var rec VideoDetail
+		b, _ := json.Marshal(detail)
+		_ = json.Unmarshal(b, &rec)
+
+		var urls []string
+		var filenames []string
+
+		if len(rec.Video.PlayAddr.URLList) > 0 {
+			urls = append(urls, rec.Video.PlayAddr.URLList[0])
+			filenames = append(filenames, fmt.Sprintf("%s_video.mp4", awemeID))
+		}
+
+		coverList := rec.Video.OriginCover.URLList
+		if len(coverList) == 0 {
+			coverList = rec.Video.Cover.URLList
+		}
+		for i, u := range coverList {
+			if u == "" {
+				continue
+			}
+			urls = append(urls, u)
+			filenames = append(filenames, fmt.Sprintf("%s_cover_%d.jpg", awemeID, i))
+			if i >= 2 {
+				break
+			}
+		}
+
+		if len(urls) > 0 {
+			noteDownloader := downloader.NewDownloader(store.NoteMediaDir(awemeID))
+			noteDownloader.BatchDownloadWithHeaders(urls, filenames, headers)
+		}
+	}
+
 	return nil
 }

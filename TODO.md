@@ -36,7 +36,7 @@
 ### 抖音（douyin）
 - [x] detail 模式（最小闭环）：解析 aweme_id，调用 detail API，按 note_id 落盘。
 - [x] a_bogus 生成（detail）：移植 `libs/douyin.js` 并用 GoJS 计算签名。
-- [ ] 实现三模式（search/detail/creator）：补齐 search/creator。
+- [x] 实现三模式（search/detail/creator）：补齐 search/creator。
 - [x] 评论抓取与去重落盘（detail）：comment list + reply（可选）。
 - [x] 媒体下载（video/cover）。
 

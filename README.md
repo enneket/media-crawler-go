@@ -41,6 +41,11 @@ Notes:
 - `ENABLE_GET_COMMENTS` will fetch `/aweme/v1/web/comment/list/` (and optional `/reply/` if `ENABLE_GET_SUB_COMMENTS`)
 - `ENABLE_GET_MEDIAS` will download `play_addr.url_list[0]` and up to 3 cover urls to `media/`
 
+## Douyin Search / Creator
+
+- `CRAWLER_TYPE: "search"` will use `KEYWORDS` to search and then reuse the same detail pipeline.
+- `CRAWLER_TYPE: "creator"` will use `DY_CREATOR_ID_LIST` to fetch creator profile and posts, then reuse the same detail pipeline.
+
 ## Usage
 
 Build and run:
