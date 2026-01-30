@@ -7,37 +7,39 @@ import (
 )
 
 type Config struct {
-	Platform              string   `mapstructure:"PLATFORM"`
-	Keywords              string   `mapstructure:"KEYWORDS"`
-	LoginType             string   `mapstructure:"LOGIN_TYPE"`
-	Cookies               string   `mapstructure:"COOKIES"`
-	CrawlerType           string   `mapstructure:"CRAWLER_TYPE"`
-	EnableIPProxy         bool     `mapstructure:"ENABLE_IP_PROXY"`
-	IPProxyPoolCount      int      `mapstructure:"IP_PROXY_POOL_COUNT"`
-	IPProxyProviderName   string   `mapstructure:"IP_PROXY_PROVIDER_NAME"`
-	Headless              bool     `mapstructure:"HEADLESS"`
-	SaveLoginState        bool     `mapstructure:"SAVE_LOGIN_STATE"`
-	EnableCDPMode         bool     `mapstructure:"ENABLE_CDP_MODE"`
-	CDPDebugPort          int      `mapstructure:"CDP_DEBUG_PORT"`
-	CustomBrowserPath     string   `mapstructure:"CUSTOM_BROWSER_PATH"`
-	CDPHeadless           bool     `mapstructure:"CDP_HEADLESS"`
-	BrowserLaunchTimeout  int      `mapstructure:"BROWSER_LAUNCH_TIMEOUT"`
-	AutoCloseBrowser      bool     `mapstructure:"AUTO_CLOSE_BROWSER"`
-	SaveDataOption        string   `mapstructure:"SAVE_DATA_OPTION"`
-	UserDataDir           string   `mapstructure:"USER_DATA_DIR"`
-	StartPage             int      `mapstructure:"START_PAGE"`
-	CrawlerMaxNotesCount  int      `mapstructure:"CRAWLER_MAX_NOTES_COUNT"`
-	MaxConcurrencyNum     int      `mapstructure:"MAX_CONCURRENCY_NUM"`
-	EnableGetMedias       bool     `mapstructure:"ENABLE_GET_MEIDAS"`
-	EnableGetComments     bool     `mapstructure:"ENABLE_GET_COMMENTS"`
-	CrawlerMaxComments    int      `mapstructure:"CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES"`
-	EnableGetSubComments  bool     `mapstructure:"ENABLE_GET_SUB_COMMENTS"`
-	CrawlerMaxSleepSec    int      `mapstructure:"CRAWLER_MAX_SLEEP_SEC"`
-	
+	Platform             string `mapstructure:"PLATFORM"`
+	Keywords             string `mapstructure:"KEYWORDS"`
+	LoginType            string `mapstructure:"LOGIN_TYPE"`
+	LoginPhone           string `mapstructure:"LOGIN_PHONE"`
+	LoginWaitTimeoutSec  int    `mapstructure:"LOGIN_WAIT_TIMEOUT_SEC"`
+	Cookies              string `mapstructure:"COOKIES"`
+	CrawlerType          string `mapstructure:"CRAWLER_TYPE"`
+	EnableIPProxy        bool   `mapstructure:"ENABLE_IP_PROXY"`
+	IPProxyPoolCount     int    `mapstructure:"IP_PROXY_POOL_COUNT"`
+	IPProxyProviderName  string `mapstructure:"IP_PROXY_PROVIDER_NAME"`
+	Headless             bool   `mapstructure:"HEADLESS"`
+	SaveLoginState       bool   `mapstructure:"SAVE_LOGIN_STATE"`
+	EnableCDPMode        bool   `mapstructure:"ENABLE_CDP_MODE"`
+	CDPDebugPort         int    `mapstructure:"CDP_DEBUG_PORT"`
+	CustomBrowserPath    string `mapstructure:"CUSTOM_BROWSER_PATH"`
+	CDPHeadless          bool   `mapstructure:"CDP_HEADLESS"`
+	BrowserLaunchTimeout int    `mapstructure:"BROWSER_LAUNCH_TIMEOUT"`
+	AutoCloseBrowser     bool   `mapstructure:"AUTO_CLOSE_BROWSER"`
+	SaveDataOption       string `mapstructure:"SAVE_DATA_OPTION"`
+	UserDataDir          string `mapstructure:"USER_DATA_DIR"`
+	StartPage            int    `mapstructure:"START_PAGE"`
+	CrawlerMaxNotesCount int    `mapstructure:"CRAWLER_MAX_NOTES_COUNT"`
+	MaxConcurrencyNum    int    `mapstructure:"MAX_CONCURRENCY_NUM"`
+	EnableGetMedias      bool   `mapstructure:"ENABLE_GET_MEDIAS"`
+	EnableGetComments    bool   `mapstructure:"ENABLE_GET_COMMENTS"`
+	CrawlerMaxComments   int    `mapstructure:"CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES"`
+	EnableGetSubComments bool   `mapstructure:"ENABLE_GET_SUB_COMMENTS"`
+	CrawlerMaxSleepSec   int    `mapstructure:"CRAWLER_MAX_SLEEP_SEC"`
+
 	// XHS Specific
-	SortType              string   `mapstructure:"SORT_TYPE"`
-	XhsSpecifiedNoteUrls  []string `mapstructure:"XHS_SPECIFIED_NOTE_URL_LIST"`
-	XhsCreatorIdList      []string `mapstructure:"XHS_CREATOR_ID_LIST"`
+	SortType             string   `mapstructure:"SORT_TYPE"`
+	XhsSpecifiedNoteUrls []string `mapstructure:"XHS_SPECIFIED_NOTE_URL_LIST"`
+	XhsCreatorIdList     []string `mapstructure:"XHS_CREATOR_ID_LIST"`
 
 	// Douyin Specific
 	DouyinSpecifiedNoteUrls []string `mapstructure:"DY_SPECIFIED_NOTE_URL_LIST"`
@@ -50,20 +52,30 @@ func LoadConfig(path string) error {
 	viper.AddConfigPath(path)
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml") // Using yaml for go config, though python uses .py
-	
+
 	// Set defaults matching python config
 	viper.SetDefault("PLATFORM", "xhs")
 	viper.SetDefault("KEYWORDS", "编程副业,编程兼职")
 	viper.SetDefault("LOGIN_TYPE", "qrcode")
+	viper.SetDefault("LOGIN_PHONE", "")
+	viper.SetDefault("LOGIN_WAIT_TIMEOUT_SEC", 120)
 	viper.SetDefault("CRAWLER_TYPE", "search")
+	viper.SetDefault("ENABLE_IP_PROXY", false)
+	viper.SetDefault("IP_PROXY_POOL_COUNT", 2)
+	viper.SetDefault("IP_PROXY_PROVIDER_NAME", "kuaidaili")
 	viper.SetDefault("HEADLESS", false)
 	viper.SetDefault("SAVE_LOGIN_STATE", true)
 	viper.SetDefault("ENABLE_CDP_MODE", true)
 	viper.SetDefault("CDP_DEBUG_PORT", 9222)
+	viper.SetDefault("CUSTOM_BROWSER_PATH", "")
+	viper.SetDefault("CDP_HEADLESS", false)
+	viper.SetDefault("BROWSER_LAUNCH_TIMEOUT", 60)
+	viper.SetDefault("AUTO_CLOSE_BROWSER", true)
 	viper.SetDefault("SAVE_DATA_OPTION", "json")
 	viper.SetDefault("START_PAGE", 1)
 	viper.SetDefault("CRAWLER_MAX_NOTES_COUNT", 15)
 	viper.SetDefault("MAX_CONCURRENCY_NUM", 1)
+	viper.SetDefault("ENABLE_GET_MEDIAS", false)
 	viper.SetDefault("ENABLE_GET_COMMENTS", true)
 	viper.SetDefault("CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES", 10)
 	viper.SetDefault("CRAWLER_MAX_SLEEP_SEC", 2)
@@ -71,6 +83,7 @@ func LoadConfig(path string) error {
 
 	viper.SetEnvPrefix("MEDIA_CRAWLER")
 	viper.AutomaticEnv()
+	viper.RegisterAlias("ENABLE_GET_MEIDAS", "ENABLE_GET_MEDIAS")
 
 	// If no config file found, just use defaults/env
 	if err := viper.ReadInConfig(); err != nil {

@@ -64,7 +64,7 @@ func (s *CsvStore) Save(data interface{}, filename string) error {
 	}
 
 	path := filepath.Join(s.Dir, filename)
-	
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -97,9 +97,8 @@ func (s *CsvStore) Save(data interface{}, filename string) error {
 }
 
 func GetStore() Store {
-	dataDir := "data"
-	path := filepath.Join(dataDir, "xhs")
-	
+	path := PlatformDir()
+
 	if config.AppConfig.SaveDataOption == "csv" {
 		return NewCsvStore(path)
 	}
@@ -117,12 +116,12 @@ func SaveNote(note interface{}) error {
 }
 
 func SaveComments(comments interface{}) error {
-	// Comments is usually a list or map wrapper. 
+	// Comments is usually a list or map wrapper.
 	// If it's CSV, we need to handle it carefully.
 	// For now, let's assume comments are passed one by one or wrapped.
 	// But current crawler passes `map[string]interface{}` for JSON.
 	// We need to fix crawler to pass `Comment` object if we want CSV support for comments.
-	
+
 	s := GetStore()
 	date := time.Now().Format("2006-01-02")
 	ext := "json"
@@ -130,4 +129,15 @@ func SaveComments(comments interface{}) error {
 		ext = "csv"
 	}
 	return s.Save(comments, fmt.Sprintf("comments_%s.%s", date, ext))
+}
+
+func SaveCreator(userID string, creator interface{}) error {
+	s := GetStore()
+	date := time.Now().Format("2006-01-02")
+	ext := "json"
+	if config.AppConfig.SaveDataOption == "csv" {
+		ext = "csv"
+	}
+	filename := fmt.Sprintf("creators_%s.%s", date, ext)
+	return s.Save(creator, filename)
 }

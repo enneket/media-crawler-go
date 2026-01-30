@@ -22,7 +22,24 @@ It currently supports crawling **Xiaohongshu (XHS)** with signature generation u
 
 ## Configuration
 
-Create a `config.yaml` file in the root directory (see `config.yaml` example).
+Create a `config.yaml` file in the root directory (see `config.example.yaml`).
+
+Notes:
+- If `HEADLESS: true`, you must use `LOGIN_TYPE: cookie` and provide `COOKIES`.
+- `LOGIN_TYPE: qrcode/phone` relies on completing login manually in the opened browser window; the crawler waits up to `LOGIN_WAIT_TIMEOUT_SEC`.
+
+## Output
+
+- Notes: `data/<platform>/notes/<note_id>/note.(json|csv)`
+- Comments: `data/<platform>/notes/<note_id>/comments.(jsonl|csv)` (deduped via `comments.idx`)
+- Media: `data/<platform>/notes/<note_id>/media/*`
+
+## Douyin Detail
+
+- Set `PLATFORM: "douyin"` (or `"dy"`), `CRAWLER_TYPE: "detail"`
+- Provide `DY_SPECIFIED_NOTE_URL_LIST` with `/video/<aweme_id>` URL or numeric aweme_id
+- `ENABLE_GET_COMMENTS` will fetch `/aweme/v1/web/comment/list/` (and optional `/reply/` if `ENABLE_GET_SUB_COMMENTS`)
+- `ENABLE_GET_MEDIAS` will download `play_addr.url_list[0]` and up to 3 cover urls to `media/`
 
 ## Usage
 
@@ -41,12 +58,17 @@ go run cmd/media-crawler/main.go
 
 ## Features
 
-- [x] Xiaohongshu Search Crawling
+- [x] Xiaohongshu Crawling (search/detail/creator)
+- [x] Douyin Crawling (detail)
 - [x] Signature Generation (X-S, X-T, X-S-Common) using Playwright
 - [x] Persistent Browser Context (Login state saving)
-- [ ] Comment Crawling
-- [ ] Media Download
-- [ ] Other Platforms (Douyin, Bilibili, etc.)
+- [x] Comment Crawling (pagination, optional sub-comments)
+- [x] Media Download (basic)
+- [x] CDP Mode (connect over remote debugging)
+- [x] Proxy Pool (kuaidaili / wandouhttp)
+- [ ] Other Platforms (Bilibili, Weibo, etc.)
+
+See [TODO.md](./TODO.md) for the porting checklist.
 
 ## Disclaimer
 

@@ -1,5 +1,25 @@
 PLATFORM: "xhs"
 KEYWORDS: "golang,programming"
+LOGIN_TYPE: "cookie" # qrcode | phone | cookie
+# LOGIN_PHONE: ""
+LOGIN_WAIT_TIMEOUT_SEC: 120
+# Proxy (optional)
+ENABLE_IP_PROXY: false
+IP_PROXY_POOL_COUNT: 2
+# kuaidaili | wandouhttp
+IP_PROXY_PROVIDER_NAME: "kuaidaili"
+# Comments
+ENABLE_GET_COMMENTS: true
+ENABLE_GET_SUB_COMMENTS: false
+CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES: 50
+# Medias
+ENABLE_GET_MEDIAS: false
+# Creator (optional)
+# XHS_CREATOR_ID_LIST:
+#   - "your_creator_user_id"
+# Douyin (detail mode, optional)
+# DY_SPECIFIED_NOTE_URL_LIST:
+#   - "https://www.douyin.com/video/7525082444551310602"
 # Set to true if you don't have a GUI environment. 
 # If HEADLESS is true, you MUST provide COOKIES below.
 HEADLESS: true
@@ -8,3 +28,9 @@ COOKIES: "your_cookie_string_here"
 SAVE_LOGIN_STATE: true
 USER_DATA_DIR: "browser_data/xhs"
 CRAWLER_MAX_SLEEP_SEC: 2
+ENABLE_CDP_MODE: true
+CDP_DEBUG_PORT: 9222
+BROWSER_LAUNCH_TIMEOUT: 60
+AUTO_CLOSE_BROWSER: true
+# CDP_HEADLESS: false
+# CUSTOM_BROWSER_PATH: ""

@@ -3,6 +3,7 @@ module media-crawler-go
 go 1.24.11
 
 require (
+	github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3
 	github.com/go-resty/resty/v2 v2.17.1
 	github.com/playwright-community/playwright-go v0.5200.1
 	github.com/spf13/viper v1.21.0
@@ -10,10 +11,13 @@ require (
 
 require (
 	github.com/deckarep/golang-set/v2 v2.7.0 // indirect
+	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect

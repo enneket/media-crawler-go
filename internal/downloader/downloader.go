@@ -34,7 +34,7 @@ func (d *Downloader) Download(url, filename string) error {
 	}
 
 	path := filepath.Join(d.Dir, filename)
-	
+
 	// Check if file exists
 	if _, err := os.Stat(path); err == nil {
 		return nil // File already exists
@@ -60,6 +60,48 @@ func (d *Downloader) Download(url, filename string) error {
 	return err
 }
 
+func (d *Downloader) DownloadWithHeaders(url, filename string, headers map[string]string) error {
+	if url == "" {
+		return fmt.Errorf("url is empty")
+	}
+	if err := os.MkdirAll(d.Dir, 0755); err != nil {
+		return err
+	}
+
+	path := filepath.Join(d.Dir, filename)
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	for k, v := range headers {
+		if k == "" || v == "" {
+			continue
+		}
+		req.Header.Set(k, v)
+	}
+
+	resp, err := d.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	out, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
 // BatchDownload downloads multiple files concurrently
 func (d *Downloader) BatchDownload(urls []string, filenames []string) []error {
 	if len(urls) != len(filenames) {
@@ -74,6 +116,29 @@ func (d *Downloader) BatchDownload(urls []string, filenames []string) []error {
 		go func(i int, u, f string) {
 			defer wg.Done()
 			if err := d.Download(u, f); err != nil {
+				errors[i] = err
+				fmt.Printf("Failed to download %s: %v\n", u, err)
+			}
+		}(i, url, filenames[i])
+	}
+
+	wg.Wait()
+	return errors
+}
+
+func (d *Downloader) BatchDownloadWithHeaders(urls []string, filenames []string, headers map[string]string) []error {
+	if len(urls) != len(filenames) {
+		return []error{fmt.Errorf("urls and filenames length mismatch")}
+	}
+
+	var wg sync.WaitGroup
+	errors := make([]error, len(urls))
+
+	for i, url := range urls {
+		wg.Add(1)
+		go func(i int, u, f string) {
+			defer wg.Done()
+			if err := d.DownloadWithHeaders(u, f, headers); err != nil {
 				errors[i] = err
 				fmt.Printf("Failed to download %s: %v\n", u, err)
 			}
