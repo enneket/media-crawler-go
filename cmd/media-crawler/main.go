@@ -11,8 +11,11 @@ import (
 	"media-crawler-go/internal/platform"
 	_ "media-crawler-go/internal/platform/bilibili"
 	_ "media-crawler-go/internal/platform/douyin"
+	_ "media-crawler-go/internal/platform/kuaishou"
+	_ "media-crawler-go/internal/platform/tieba"
 	_ "media-crawler-go/internal/platform/weibo"
 	_ "media-crawler-go/internal/platform/xhs"
+	_ "media-crawler-go/internal/platform/zhihu"
 	"net/http"
 	"os"
 )

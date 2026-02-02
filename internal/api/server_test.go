@@ -14,8 +14,11 @@ import (
 
 	_ "media-crawler-go/internal/platform/bilibili"
 	_ "media-crawler-go/internal/platform/douyin"
+	_ "media-crawler-go/internal/platform/kuaishou"
+	_ "media-crawler-go/internal/platform/tieba"
 	_ "media-crawler-go/internal/platform/weibo"
 	_ "media-crawler-go/internal/platform/xhs"
+	_ "media-crawler-go/internal/platform/zhihu"
 )
 
 func TestServerRunStopStatus(t *testing.T) {
@@ -68,11 +71,11 @@ func TestServerRunStopStatus(t *testing.T) {
 
 func TestServerRunValidation(t *testing.T) {
 	config.AppConfig = config.Config{}
-	runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
-	srv := NewServer(NewTaskManagerWithRunner(runFn))
 
 	{
 		config.AppConfig = config.Config{}
+		runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
+		srv := NewServer(NewTaskManagerWithRunner(runFn))
 		body, _ := json.Marshal(RunRequest{Platform: "xhs", CrawlerType: "search"})
 		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
 		w := httptest.NewRecorder()
@@ -83,6 +86,8 @@ func TestServerRunValidation(t *testing.T) {
 	}
 	{
 		config.AppConfig = config.Config{}
+		runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
+		srv := NewServer(NewTaskManagerWithRunner(runFn))
 		body, _ := json.Marshal(RunRequest{Platform: "nope", CrawlerType: "detail"})
 		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
 		w := httptest.NewRecorder()
@@ -93,6 +98,8 @@ func TestServerRunValidation(t *testing.T) {
 	}
 	{
 		config.AppConfig = config.Config{}
+		runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
+		srv := NewServer(NewTaskManagerWithRunner(runFn))
 		body, _ := json.Marshal(RunRequest{Platform: "bilibili", CrawlerType: "detail"})
 		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
 		w := httptest.NewRecorder()
@@ -103,11 +110,37 @@ func TestServerRunValidation(t *testing.T) {
 	}
 	{
 		config.AppConfig = config.Config{}
+		runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
+		srv := NewServer(NewTaskManagerWithRunner(runFn))
 		body, _ := json.Marshal(RunRequest{
 			Platform:               "bilibili",
 			CrawlerType:            "detail",
 			BiliSpecifiedVideoUrls: []string{"BV1Q5411W7bH"},
 		})
+		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusAccepted {
+			t.Fatalf("expected 202, got=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+	{
+		config.AppConfig = config.Config{}
+		runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
+		srv := NewServer(NewTaskManagerWithRunner(runFn))
+		body, _ := json.Marshal(RunRequest{Platform: "tieba", CrawlerType: "detail"})
+		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+	{
+		config.AppConfig = config.Config{}
+		runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
+		srv := NewServer(NewTaskManagerWithRunner(runFn))
+		body, _ := json.Marshal(RunRequest{Platform: "tieba", CrawlerType: "detail", TiebaSpecifiedNoteUrls: []string{"https://tieba.baidu.com/p/123"}})
 		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
 		w := httptest.NewRecorder()
 		srv.Handler().ServeHTTP(w, r)

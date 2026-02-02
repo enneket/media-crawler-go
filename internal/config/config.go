@@ -58,6 +58,15 @@ type Config struct {
 
 	// Weibo Specific
 	WBSpecifiedNoteUrls []string `mapstructure:"WB_SPECIFIED_NOTE_URL_LIST"`
+
+	// Tieba Specific
+	TiebaSpecifiedNoteUrls []string `mapstructure:"TIEBA_SPECIFIED_NOTE_URL_LIST"`
+
+	// Zhihu Specific
+	ZhihuSpecifiedNoteUrls []string `mapstructure:"ZHIHU_SPECIFIED_NOTE_URL_LIST"`
+
+	// Kuaishou Specific
+	KuaishouSpecifiedNoteUrls []string `mapstructure:"KS_SPECIFIED_NOTE_URL_LIST"`
 }
 
 var AppConfig Config
@@ -102,6 +111,9 @@ func LoadConfig(path string) error {
 	viper.SetDefault("CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES", 10)
 	viper.SetDefault("CRAWLER_MAX_SLEEP_SEC", 2)
 	viper.SetDefault("SORT_TYPE", "popularity_descending")
+	viper.SetDefault("TIEBA_SPECIFIED_NOTE_URL_LIST", []string{})
+	viper.SetDefault("ZHIHU_SPECIFIED_NOTE_URL_LIST", []string{})
+	viper.SetDefault("KS_SPECIFIED_NOTE_URL_LIST", []string{})
 
 	viper.SetEnvPrefix("MEDIA_CRAWLER")
 	viper.AutomaticEnv()

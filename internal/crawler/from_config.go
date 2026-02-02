@@ -39,6 +39,15 @@ func RequestFromConfig(cfg config.Config) Request {
 	case "weibo", "wb", "微博":
 		out.Mode = ModeDetail
 		out.Inputs = cfg.WBSpecifiedNoteUrls
+	case "tieba", "tb", "贴吧":
+		out.Mode = ModeDetail
+		out.Inputs = cfg.TiebaSpecifiedNoteUrls
+	case "zhihu", "zh", "知乎":
+		out.Mode = ModeDetail
+		out.Inputs = cfg.ZhihuSpecifiedNoteUrls
+	case "kuaishou", "ks", "快手":
+		out.Mode = ModeDetail
+		out.Inputs = cfg.KuaishouSpecifiedNoteUrls
 	}
 
 	return out

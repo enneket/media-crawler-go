@@ -38,6 +38,10 @@ type RunRequest struct {
 	BiliSpecifiedVideoUrls []string `json:"bili_specified_video_url_list,omitempty"`
 	WBSpecifiedNoteUrls    []string `json:"wb_specified_note_url_list,omitempty"`
 
+	TiebaSpecifiedNoteUrls []string `json:"tieba_specified_note_url_list,omitempty"`
+	ZhihuSpecifiedNoteUrls []string `json:"zhihu_specified_note_url_list,omitempty"`
+	KSSpecifiedNoteUrls    []string `json:"ks_specified_note_url_list,omitempty"`
+
 	StoreBackend   string `json:"store_backend,omitempty"`
 	SQLitePath     string `json:"sqlite_path,omitempty"`
 	SaveDataOption string `json:"save_data_option,omitempty"`
@@ -172,6 +176,15 @@ func applyRunRequestToConfig(cfg *config.Config, req RunRequest) {
 	if len(req.WBSpecifiedNoteUrls) > 0 {
 		cfg.WBSpecifiedNoteUrls = req.WBSpecifiedNoteUrls
 	}
+	if len(req.TiebaSpecifiedNoteUrls) > 0 {
+		cfg.TiebaSpecifiedNoteUrls = req.TiebaSpecifiedNoteUrls
+	}
+	if len(req.ZhihuSpecifiedNoteUrls) > 0 {
+		cfg.ZhihuSpecifiedNoteUrls = req.ZhihuSpecifiedNoteUrls
+	}
+	if len(req.KSSpecifiedNoteUrls) > 0 {
+		cfg.KuaishouSpecifiedNoteUrls = req.KSSpecifiedNoteUrls
+	}
 	if v := strings.TrimSpace(req.StoreBackend); v != "" {
 		cfg.StoreBackend = v
 	}
@@ -253,6 +266,27 @@ func validateRunConfig(cfg config.Config) error {
 		}
 		if len(cfg.WBSpecifiedNoteUrls) == 0 {
 			return ValidationError{Msg: "wb_specified_note_url_list is required for detail"}
+		}
+	case "tieba", "tb", "贴吧":
+		if crawlerType != "detail" {
+			return ValidationError{Msg: "tieba only supports crawler_type=detail"}
+		}
+		if len(cfg.TiebaSpecifiedNoteUrls) == 0 {
+			return ValidationError{Msg: "tieba_specified_note_url_list is required for detail"}
+		}
+	case "zhihu", "zh", "知乎":
+		if crawlerType != "detail" {
+			return ValidationError{Msg: "zhihu only supports crawler_type=detail"}
+		}
+		if len(cfg.ZhihuSpecifiedNoteUrls) == 0 {
+			return ValidationError{Msg: "zhihu_specified_note_url_list is required for detail"}
+		}
+	case "kuaishou", "ks", "快手":
+		if crawlerType != "detail" {
+			return ValidationError{Msg: "kuaishou only supports crawler_type=detail"}
+		}
+		if len(cfg.KuaishouSpecifiedNoteUrls) == 0 {
+			return ValidationError{Msg: "ks_specified_note_url_list is required for detail"}
 		}
 	default:
 		if crawlerType == "search" && strings.TrimSpace(cfg.Keywords) == "" {

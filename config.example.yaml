@@ -40,6 +40,15 @@ ENABLE_GET_MEDIAS: false
 # Weibo (detail mode, optional)
 # WB_SPECIFIED_NOTE_URL_LIST:
 #   - "https://m.weibo.cn/status/4KjD8oZ4D"
+# Tieba (detail mode, optional)
+# TIEBA_SPECIFIED_NOTE_URL_LIST:
+#   - "https://tieba.baidu.com/p/123456"
+# Zhihu (detail mode, optional)
+# ZHIHU_SPECIFIED_NOTE_URL_LIST:
+#   - "https://www.zhihu.com/question/123/answer/456"
+# Kuaishou/KS (detail mode, optional)
+# KS_SPECIFIED_NOTE_URL_LIST:
+#   - "https://www.kuaishou.com/short-video/abc123"
 # Set to true if you don't have a GUI environment. 
 # If HEADLESS is true, you MUST provide COOKIES below.
 HEADLESS: true
