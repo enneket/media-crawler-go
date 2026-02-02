@@ -56,6 +56,7 @@ func (c *Crawler) Run(ctx context.Context, req crawler.Request) (crawler.Result,
 			logger.Error("zhihu fetch failed", "url", url, "err", err)
 			return err
 		}
+		riskHint := crawler.DetectRiskHint(res.Body)
 		record := map[string]any{
 			"url":            res.URL,
 			"status_code":    res.StatusCode,
@@ -67,6 +68,7 @@ func (c *Crawler) Run(ctx context.Context, req crawler.Request) (crawler.Result,
 			"question_id":    qid,
 			"answer_id":      aid,
 			"parsed_note_id": noteID,
+			"risk_hint":      riskHint,
 		}
 		if noteID == "" {
 			if qid != "" && aid != "" {
@@ -83,6 +85,9 @@ func (c *Crawler) Run(ctx context.Context, req crawler.Request) (crawler.Result,
 			return err
 		}
 		logger.Info("zhihu note saved", "note_id", noteID)
+		if riskHint != "" {
+			return crawler.NewRiskHintError(req.Platform, res.URL, riskHint)
+		}
 		return nil
 	})
 

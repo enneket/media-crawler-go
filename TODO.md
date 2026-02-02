@@ -34,7 +34,7 @@
 - [x] 请求重试：基于 HTTP_RETRY_*（429/5xx）自动退避重试。
 
 ## 进行中（Go）
-- [ ] 平台编排抽象：internal/crawler 目前仅有 interface，cmd 仍按 switch 分发。
+- [x] 平台编排抽象：internal/crawler + platform registry 统一分发（Runner/Request/Result）。
 - [ ] 更完善的错误处理：统一重试/限速/风控提示与可观测性（日志/metrics）。
 
 ## 待转写（P0，高优先）
