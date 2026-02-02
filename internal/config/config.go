@@ -52,6 +52,9 @@ type Config struct {
 	// Douyin Specific
 	DouyinSpecifiedNoteUrls []string `mapstructure:"DY_SPECIFIED_NOTE_URL_LIST"`
 	DouyinCreatorIdList     []string `mapstructure:"DY_CREATOR_ID_LIST"`
+
+	// Bilibili Specific
+	BiliSpecifiedVideoUrls []string `mapstructure:"BILI_SPECIFIED_VIDEO_URL_LIST"`
 }
 
 var AppConfig Config

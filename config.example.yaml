@@ -34,6 +34,9 @@ ENABLE_GET_MEDIAS: false
 # Douyin (creator mode, optional)
 # DY_CREATOR_ID_LIST:
 #   - "https://www.douyin.com/user/MS4wLjABAAAA..."
+# Bilibili (detail mode, optional)
+# BILI_SPECIFIED_VIDEO_URL_LIST:
+#   - "https://www.bilibili.com/video/BV1Q5411W7bH"
 # Set to true if you don't have a GUI environment. 
 # If HEADLESS is true, you MUST provide COOKIES below.
 HEADLESS: true
