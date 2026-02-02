@@ -25,6 +25,14 @@ func NewDownloader(dir string) *Downloader {
 }
 
 func (d *Downloader) Download(url, filename string) error {
+	return d.download(url, filename, nil)
+}
+
+func (d *Downloader) DownloadWithHeaders(url, filename string, headers map[string]string) error {
+	return d.download(url, filename, headers)
+}
+
+func (d *Downloader) download(url, filename string, headers map[string]string) error {
 	if url == "" {
 		return fmt.Errorf("url is empty")
 	}
@@ -40,66 +48,71 @@ func (d *Downloader) Download(url, filename string) error {
 		return nil // File already exists
 	}
 
-	resp, err := d.Client.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+	const maxRetry = 3
+	var lastErr error
+	for attempt := 0; attempt < maxRetry; attempt++ {
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return err
+		}
+		for k, v := range headers {
+			if k == "" || v == "" {
+				continue
+			}
+			req.Header.Set(k, v)
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	out, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	return err
-}
-
-func (d *Downloader) DownloadWithHeaders(url, filename string, headers map[string]string) error {
-	if url == "" {
-		return fmt.Errorf("url is empty")
-	}
-	if err := os.MkdirAll(d.Dir, 0755); err != nil {
-		return err
-	}
-
-	path := filepath.Join(d.Dir, filename)
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	for k, v := range headers {
-		if k == "" || v == "" {
+		resp, err := d.Client.Do(req)
+		if err != nil {
+			lastErr = err
+			time.Sleep(time.Duration(attempt+1) * 500 * time.Millisecond)
 			continue
 		}
-		req.Header.Set(k, v)
-	}
 
-	resp, err := d.Client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
-	}
+		func() {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				lastErr = fmt.Errorf("bad status: %s", resp.Status)
+				return
+			}
 
-	out, err := os.Create(path)
-	if err != nil {
-		return err
+			tmp, err := os.CreateTemp(d.Dir, filename+".part-*")
+			if err != nil {
+				lastErr = err
+				return
+			}
+			tmpPath := tmp.Name()
+			defer func() {
+				_ = tmp.Close()
+				_ = os.Remove(tmpPath)
+			}()
+
+			if _, err := io.Copy(tmp, resp.Body); err != nil {
+				lastErr = err
+				return
+			}
+			if err := tmp.Close(); err != nil {
+				lastErr = err
+				return
+			}
+
+			if err := os.Rename(tmpPath, path); err != nil {
+				lastErr = err
+				return
+			}
+			lastErr = nil
+		}()
+
+		if lastErr == nil {
+			return nil
+		}
+		if resp != nil && (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500) {
+			time.Sleep(time.Duration(attempt+1) * 500 * time.Millisecond)
+			continue
+		}
+		return lastErr
 	}
-	defer out.Close()
-	_, err = io.Copy(out, resp.Body)
-	return err
+	return lastErr
 }
 
 // BatchDownload downloads multiple files concurrently

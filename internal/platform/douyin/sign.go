@@ -7,12 +7,14 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 
 	"github.com/dop251/goja"
 )
 
 type Signer struct {
 	runtime *goja.Runtime
+	mu      sync.Mutex
 }
 
 func NewSigner() (*Signer, error) {
@@ -46,6 +48,9 @@ func (s *Signer) SignReply(params url.Values, ua string) (string, error) {
 }
 
 func (s *Signer) callFn(name string, params url.Values, ua string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	fn, ok := goja.AssertFunction(s.runtime.Get(name))
 	if !ok {
 		return "", fmt.Errorf("js function %s not found", name)

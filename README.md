@@ -43,7 +43,7 @@ Notes:
 
 ## Douyin Search / Creator
 
-- `CRAWLER_TYPE: "search"` will use `KEYWORDS` to search and then reuse the same detail pipeline.
+- `CRAWLER_TYPE: "search"` will use `KEYWORDS` to search (signed with `a_bogus`) and then reuse the same detail pipeline.
 - `CRAWLER_TYPE: "creator"` will use `DY_CREATOR_ID_LIST` to fetch creator profile and posts, then reuse the same detail pipeline.
 
 ## Usage
@@ -64,7 +64,7 @@ go run cmd/media-crawler/main.go
 ## Features
 
 - [x] Xiaohongshu Crawling (search/detail/creator)
-- [x] Douyin Crawling (detail)
+- [x] Douyin Crawling (search/detail/creator)
 - [x] Signature Generation (X-S, X-T, X-S-Common) using Playwright
 - [x] Persistent Browser Context (Login state saving)
 - [x] Comment Crawling (pagination, optional sub-comments)

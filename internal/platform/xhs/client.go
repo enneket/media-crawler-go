@@ -28,9 +28,13 @@ func NewClient(signer *Signer) *Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = switcher.ProxyFunc
 
+	timeoutSec := config.AppConfig.HttpTimeoutSec
+	if timeoutSec <= 0 {
+		timeoutSec = 60
+	}
 	httpClient := &http.Client{
 		Transport: transport,
-		Timeout:   30 * time.Second,
+		Timeout:   time.Duration(timeoutSec) * time.Second,
 	}
 
 	client := resty.NewWithClient(httpClient)
@@ -102,29 +106,53 @@ func (c *Client) ensureProxy(ctx context.Context) error {
 }
 
 func (c *Client) Post(uri string, data interface{}, result interface{}) error {
-	if err := c.ensureProxy(context.Background()); err != nil {
-		return err
-	}
-	headers, err := c.preHeaders(uri, data, "POST")
-	if err != nil {
-		return err
+	retryCount, baseDelay, maxDelay := retryParams()
+	var lastErr error
+
+	for attempt := 0; attempt < retryCount; attempt++ {
+		if err := c.ensureProxy(context.Background()); err != nil {
+			lastErr = err
+			if attempt < retryCount-1 {
+				time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+				continue
+			}
+			return err
+		}
+
+		headers, err := c.preHeaders(uri, data, "POST")
+		if err != nil {
+			return err
+		}
+
+		resp, err := c.HttpClient.R().
+			SetContext(context.Background()).
+			SetHeaders(headers).
+			SetBody(data).
+			SetResult(result).
+			Post(uri)
+
+		if err == nil && !resp.IsError() {
+			return nil
+		}
+
+		if err != nil {
+			lastErr = err
+		} else {
+			lastErr = fmt.Errorf("status: %d, body: %s", resp.StatusCode(), resp.String())
+		}
+
+		if shouldInvalidateProxy(resp) && c.ProxyPool != nil {
+			c.ProxyPool.InvalidateCurrent()
+		}
+		if !shouldRetry(resp, err) {
+			return lastErr
+		}
+		if attempt < retryCount-1 {
+			time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+		}
 	}
 
-	resp, err := c.HttpClient.R().
-		SetHeaders(headers).
-		SetBody(data).
-		SetResult(result).
-		Post(uri)
-
-	if err != nil {
-		return err
-	}
-
-	if resp.IsError() {
-		return fmt.Errorf("status: %d, body: %s", resp.StatusCode(), resp.String())
-	}
-
-	return nil
+	return lastErr
 }
 
 func (c *Client) Pong() bool {
@@ -180,11 +208,6 @@ func (c *Client) GetNotesByCreator(userId, cursor string) (*CreatorNotesResult, 
 		"image_formats": "jpg,webp,avif",
 	}
 
-	headers, err := c.preHeaders(uri, params, "GET")
-	if err != nil {
-		return nil, err
-	}
-
 	type Response struct {
 		Success bool               `json:"success"`
 		Code    int                `json:"code"`
@@ -193,28 +216,54 @@ func (c *Client) GetNotesByCreator(userId, cursor string) (*CreatorNotesResult, 
 	}
 
 	var resp Response
-	if err := c.ensureProxy(context.Background()); err != nil {
-		return nil, err
-	}
-	r, err := c.HttpClient.R().
-		SetHeaders(headers).
-		SetQueryParams(params).
-		SetResult(&resp).
-		Get(uri)
+	retryCount, baseDelay, maxDelay := retryParams()
+	var lastErr error
 
-	if err != nil {
-		return nil, err
-	}
+	for attempt := 0; attempt < retryCount; attempt++ {
+		if err := c.ensureProxy(context.Background()); err != nil {
+			lastErr = err
+			if attempt < retryCount-1 {
+				time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+				continue
+			}
+			return nil, err
+		}
 
-	if r.IsError() {
-		return nil, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
-	}
+		headers, err := c.preHeaders(uri, params, "GET")
+		if err != nil {
+			return nil, err
+		}
 
-	if !resp.Success {
-		return nil, fmt.Errorf("api error: %s", resp.Msg)
-	}
+		r, err := c.HttpClient.R().
+			SetContext(context.Background()).
+			SetHeaders(headers).
+			SetQueryParams(params).
+			SetResult(&resp).
+			Get(uri)
 
-	return &resp.Data, nil
+		if err == nil && !r.IsError() && resp.Success {
+			return &resp.Data, nil
+		}
+
+		if err != nil {
+			lastErr = err
+		} else if r.IsError() {
+			lastErr = fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		} else {
+			lastErr = fmt.Errorf("api error: %s", resp.Msg)
+		}
+
+		if shouldInvalidateProxy(r) && c.ProxyPool != nil {
+			c.ProxyPool.InvalidateCurrent()
+		}
+		if !shouldRetry(r, err) {
+			return nil, lastErr
+		}
+		if attempt < retryCount-1 {
+			time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+		}
+	}
+	return nil, lastErr
 }
 
 func (c *Client) GetNoteById(noteId, xsecSource, xsecToken string) (*Note, error) {
@@ -270,12 +319,6 @@ func (c *Client) GetNoteComments(noteId, xsecToken, cursor string) (*CommentResu
 		"xsec_token":     xsecToken,
 	}
 
-	// Sign for GET request
-	headers, err := c.preHeaders(uri, params, "GET")
-	if err != nil {
-		return nil, err
-	}
-
 	type Response struct {
 		Success bool          `json:"success"`
 		Code    int           `json:"code"`
@@ -284,30 +327,54 @@ func (c *Client) GetNoteComments(noteId, xsecToken, cursor string) (*CommentResu
 	}
 
 	var resp Response
-	// Build query params
-	// Resty handles params with SetQueryParams
-	if err := c.ensureProxy(context.Background()); err != nil {
-		return nil, err
-	}
-	r, err := c.HttpClient.R().
-		SetHeaders(headers).
-		SetQueryParams(params).
-		SetResult(&resp).
-		Get(uri)
+	retryCount, baseDelay, maxDelay := retryParams()
+	var lastErr error
 
-	if err != nil {
-		return nil, err
-	}
+	for attempt := 0; attempt < retryCount; attempt++ {
+		if err := c.ensureProxy(context.Background()); err != nil {
+			lastErr = err
+			if attempt < retryCount-1 {
+				time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+				continue
+			}
+			return nil, err
+		}
 
-	if r.IsError() {
-		return nil, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
-	}
+		headers, err := c.preHeaders(uri, params, "GET")
+		if err != nil {
+			return nil, err
+		}
 
-	if !resp.Success {
-		return nil, fmt.Errorf("api error: %s", resp.Msg)
-	}
+		r, err := c.HttpClient.R().
+			SetContext(context.Background()).
+			SetHeaders(headers).
+			SetQueryParams(params).
+			SetResult(&resp).
+			Get(uri)
 
-	return &resp.Data, nil
+		if err == nil && !r.IsError() && resp.Success {
+			return &resp.Data, nil
+		}
+
+		if err != nil {
+			lastErr = err
+		} else if r.IsError() {
+			lastErr = fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		} else {
+			lastErr = fmt.Errorf("api error: %s", resp.Msg)
+		}
+
+		if shouldInvalidateProxy(r) && c.ProxyPool != nil {
+			c.ProxyPool.InvalidateCurrent()
+		}
+		if !shouldRetry(r, err) {
+			return nil, lastErr
+		}
+		if attempt < retryCount-1 {
+			time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+		}
+	}
+	return nil, lastErr
 }
 
 func (c *Client) GetNoteSubComments(noteId, rootCommentId, xsecToken, cursor string, num int) (*CommentResult, error) {
@@ -325,11 +392,6 @@ func (c *Client) GetNoteSubComments(noteId, rootCommentId, xsecToken, cursor str
 		"xsec_token":      xsecToken,
 	}
 
-	headers, err := c.preHeaders(uri, params, "GET")
-	if err != nil {
-		return nil, err
-	}
-
 	type Response struct {
 		Success bool          `json:"success"`
 		Code    int           `json:"code"`
@@ -338,26 +400,103 @@ func (c *Client) GetNoteSubComments(noteId, rootCommentId, xsecToken, cursor str
 	}
 
 	var resp Response
-	if err := c.ensureProxy(context.Background()); err != nil {
-		return nil, err
-	}
-	r, err := c.HttpClient.R().
-		SetHeaders(headers).
-		SetQueryParams(params).
-		SetResult(&resp).
-		Get(uri)
+	retryCount, baseDelay, maxDelay := retryParams()
+	var lastErr error
 
+	for attempt := 0; attempt < retryCount; attempt++ {
+		if err := c.ensureProxy(context.Background()); err != nil {
+			lastErr = err
+			if attempt < retryCount-1 {
+				time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+				continue
+			}
+			return nil, err
+		}
+
+		headers, err := c.preHeaders(uri, params, "GET")
+		if err != nil {
+			return nil, err
+		}
+
+		r, err := c.HttpClient.R().
+			SetContext(context.Background()).
+			SetHeaders(headers).
+			SetQueryParams(params).
+			SetResult(&resp).
+			Get(uri)
+
+		if err == nil && !r.IsError() && resp.Success {
+			return &resp.Data, nil
+		}
+
+		if err != nil {
+			lastErr = err
+		} else if r.IsError() {
+			lastErr = fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		} else {
+			lastErr = fmt.Errorf("api error: %s", resp.Msg)
+		}
+
+		if shouldInvalidateProxy(r) && c.ProxyPool != nil {
+			c.ProxyPool.InvalidateCurrent()
+		}
+		if !shouldRetry(r, err) {
+			return nil, lastErr
+		}
+		if attempt < retryCount-1 {
+			time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+		}
+	}
+	return nil, lastErr
+}
+
+func retryParams() (int, time.Duration, time.Duration) {
+	retryCount := config.AppConfig.HttpRetryCount
+	if retryCount <= 0 {
+		retryCount = 3
+	}
+	baseMs := config.AppConfig.HttpRetryBaseDelayMs
+	if baseMs <= 0 {
+		baseMs = 500
+	}
+	maxMs := config.AppConfig.HttpRetryMaxDelayMs
+	if maxMs <= 0 {
+		maxMs = 4000
+	}
+	base := time.Duration(baseMs) * time.Millisecond
+	max := time.Duration(maxMs) * time.Millisecond
+	if max < base {
+		max = base
+	}
+	return retryCount, base, max
+}
+
+func backoffDelay(attempt int, base time.Duration, max time.Duration) time.Duration {
+	if attempt < 0 {
+		return base
+	}
+	d := base * time.Duration(1<<attempt)
+	if d > max {
+		return max
+	}
+	return d
+}
+
+func shouldRetry(resp *resty.Response, err error) bool {
 	if err != nil {
-		return nil, err
+		return true
 	}
-
-	if r.IsError() {
-		return nil, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+	if resp == nil {
+		return false
 	}
+	code := resp.StatusCode()
+	return code == http.StatusTooManyRequests || (code >= 500 && code <= 599)
+}
 
-	if !resp.Success {
-		return nil, fmt.Errorf("api error: %s", resp.Msg)
+func shouldInvalidateProxy(resp *resty.Response) bool {
+	if resp == nil {
+		return false
 	}
-
-	return &resp.Data, nil
+	code := resp.StatusCode()
+	return code == http.StatusTooManyRequests || code == http.StatusForbidden
 }

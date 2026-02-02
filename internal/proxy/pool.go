@@ -77,3 +77,9 @@ func (p *Pool) Current() (Proxy, bool) {
 	}
 	return *p.current, true
 }
+
+func (p *Pool) InvalidateCurrent() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.current = nil
+}

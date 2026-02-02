@@ -132,6 +132,9 @@ func SaveComments(comments interface{}) error {
 }
 
 func SaveCreator(userID string, creator interface{}) error {
+	if err := sqliteUpsertCreator(userID, creator); err != nil {
+		return err
+	}
 	s := GetStore()
 	date := time.Now().Format("2006-01-02")
 	ext := "json"

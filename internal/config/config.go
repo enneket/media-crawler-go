@@ -14,6 +14,12 @@ type Config struct {
 	LoginWaitTimeoutSec  int    `mapstructure:"LOGIN_WAIT_TIMEOUT_SEC"`
 	Cookies              string `mapstructure:"COOKIES"`
 	CrawlerType          string `mapstructure:"CRAWLER_TYPE"`
+	StoreBackend         string `mapstructure:"STORE_BACKEND"`
+	SQLitePath           string `mapstructure:"SQLITE_PATH"`
+	HttpTimeoutSec       int    `mapstructure:"HTTP_TIMEOUT_SEC"`
+	HttpRetryCount       int    `mapstructure:"HTTP_RETRY_COUNT"`
+	HttpRetryBaseDelayMs int    `mapstructure:"HTTP_RETRY_BASE_DELAY_MS"`
+	HttpRetryMaxDelayMs  int    `mapstructure:"HTTP_RETRY_MAX_DELAY_MS"`
 	EnableIPProxy        bool   `mapstructure:"ENABLE_IP_PROXY"`
 	IPProxyPoolCount     int    `mapstructure:"IP_PROXY_POOL_COUNT"`
 	IPProxyProviderName  string `mapstructure:"IP_PROXY_PROVIDER_NAME"`
@@ -60,6 +66,12 @@ func LoadConfig(path string) error {
 	viper.SetDefault("LOGIN_PHONE", "")
 	viper.SetDefault("LOGIN_WAIT_TIMEOUT_SEC", 120)
 	viper.SetDefault("CRAWLER_TYPE", "search")
+	viper.SetDefault("STORE_BACKEND", "file")
+	viper.SetDefault("SQLITE_PATH", "data/media_crawler.db")
+	viper.SetDefault("HTTP_TIMEOUT_SEC", 60)
+	viper.SetDefault("HTTP_RETRY_COUNT", 3)
+	viper.SetDefault("HTTP_RETRY_BASE_DELAY_MS", 500)
+	viper.SetDefault("HTTP_RETRY_MAX_DELAY_MS", 4000)
 	viper.SetDefault("ENABLE_IP_PROXY", false)
 	viper.SetDefault("IP_PROXY_POOL_COUNT", 2)
 	viper.SetDefault("IP_PROXY_PROVIDER_NAME", "kuaidaili")

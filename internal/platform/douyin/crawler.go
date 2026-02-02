@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/playwright-community/playwright-go"
@@ -260,18 +261,16 @@ func (c *DouyinCrawler) runDetailMode(ctx context.Context) error {
 		}
 	}
 
+	var ids []string
 	for _, input := range inputs {
 		awemeID := resolveAwemeID(input)
 		if awemeID == "" {
 			fmt.Printf("Skip invalid douyin url/id: %s\n", input)
 			continue
 		}
-		if err := c.processOneAweme(ctx, awemeID, msToken); err != nil {
-			fmt.Printf("Failed to process %s: %v\n", awemeID, err)
-		}
-
-		time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+		ids = append(ids, awemeID)
 	}
+	c.processAwemeIDs(ctx, ids, msToken)
 	return nil
 }
 
@@ -315,19 +314,20 @@ func (c *DouyinCrawler) runCreatorMode(ctx context.Context) error {
 			}
 			hasMore = resp.HasMore
 			maxCursor = resp.MaxCursor
+
+			var ids []string
 			for _, aweme := range resp.AwemeList {
 				id, _ := aweme["aweme_id"].(string)
 				if id == "" {
 					continue
 				}
-				if err := c.processOneAweme(ctx, id, msToken); err != nil {
-					fmt.Printf("Failed to process %s: %v\n", id, err)
-				}
+				ids = append(ids, id)
 				processed++
 				if limit > 0 && processed >= limit {
 					break
 				}
 			}
+			c.processAwemeIDs(ctx, ids, msToken)
 			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
 		}
 	}
@@ -368,7 +368,7 @@ func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
 				continue
 			}
 			offset := page*limitCount - limitCount
-			resp, err := c.client.SearchInfoByKeyword(ctx, keyword, offset, limitCount, searchID)
+			resp, err := c.client.SearchInfoByKeyword(ctx, keyword, offset, limitCount, searchID, msToken)
 			if err != nil {
 				return err
 			}
@@ -377,6 +377,7 @@ func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
 			}
 			searchID = resp.Extra.LogID
 
+			var ids []string
 			for _, item := range resp.Data {
 				aweme := pickAwemeInfoFromSearchItem(item)
 				if aweme == nil {
@@ -386,10 +387,9 @@ func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
 				if id == "" {
 					continue
 				}
-				if err := c.processOneAweme(ctx, id, msToken); err != nil {
-					fmt.Printf("Failed to process %s: %v\n", id, err)
-				}
+				ids = append(ids, id)
 			}
+			c.processAwemeIDs(ctx, ids, msToken)
 			page++
 			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
 		}
@@ -449,10 +449,8 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 				for i := range comments {
 					items = append(items, &comments[i])
 				}
-				_, err := store.AppendUniqueCSV(
-					store.NoteDir(awemeID),
-					"comments.csv",
-					"comments.idx",
+				_, err := store.AppendUniqueCommentsCSV(
+					awemeID,
 					items,
 					func(item any) (string, error) { return item.(*Comment).CID, nil },
 					(&Comment{}).CSVHeader(),
@@ -466,10 +464,8 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 				for i := range comments {
 					items = append(items, comments[i])
 				}
-				_, err := store.AppendUniqueJSONL(
-					store.NoteDir(awemeID),
-					"comments.jsonl",
-					"comments.idx",
+				_, err := store.AppendUniqueCommentsJSONL(
+					awemeID,
 					items,
 					func(item any) (string, error) { return item.(Comment).CID, nil },
 				)
@@ -522,5 +518,66 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 		}
 	}
 
+	if config.AppConfig.CrawlerMaxSleepSec > 0 {
+		time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+	}
 	return nil
+}
+
+func (c *DouyinCrawler) processAwemeIDs(ctx context.Context, ids []string, msToken string) {
+	if len(ids) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, len(ids))
+	uniq := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniq = append(uniq, id)
+	}
+
+	n := config.AppConfig.MaxConcurrencyNum
+	if n <= 1 {
+		for _, id := range uniq {
+			if err := c.processOneAweme(ctx, id, msToken); err != nil {
+				fmt.Printf("Failed to process %s: %v\n", id, err)
+			}
+		}
+		return
+	}
+
+	jobs := make(chan string)
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			for id := range jobs {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				if err := c.processOneAweme(ctx, id, msToken); err != nil {
+					fmt.Printf("Failed to process %s: %v\n", id, err)
+				}
+			}
+		}()
+	}
+	for _, id := range uniq {
+		select {
+		case <-ctx.Done():
+			close(jobs)
+			wg.Wait()
+			return
+		case jobs <- id:
+		}
+	}
+	close(jobs)
+	wg.Wait()
 }

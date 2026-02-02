@@ -13,7 +13,7 @@ type searchResp struct {
 	} `json:"extra"`
 }
 
-func (c *Client) SearchInfoByKeyword(ctx context.Context, keyword string, offset int, count int, searchID string) (searchResp, error) {
+func (c *Client) SearchInfoByKeyword(ctx context.Context, keyword string, offset int, count int, searchID string, msToken string) (searchResp, error) {
 	if err := c.ensureProxy(ctx); err != nil {
 		return searchResp{}, err
 	}
@@ -21,7 +21,7 @@ func (c *Client) SearchInfoByKeyword(ctx context.Context, keyword string, offset
 		count = 15
 	}
 
-	params := url.Values{}
+	params := defaultParams(msToken, "")
 	params.Set("search_channel", "general")
 	params.Set("enable_history", "1")
 	params.Set("keyword", keyword)
@@ -36,6 +36,12 @@ func (c *Client) SearchInfoByKeyword(ctx context.Context, keyword string, offset
 	if searchID != "" {
 		params.Set("search_id", searchID)
 	}
+
+	aBogus, err := c.signer.SignDetail(params, c.userAgent)
+	if err != nil {
+		return searchResp{}, err
+	}
+	params.Set("a_bogus", aBogus)
 
 	var out searchResp
 	r, err := c.httpClient.R().

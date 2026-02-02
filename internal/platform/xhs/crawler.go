@@ -412,10 +412,8 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
 					comment.NoteId = noteId
 					items = append(items, &comment)
 				}
-				_, err := store.AppendUniqueCSV(
-					store.NoteDir(noteId),
-					"comments.csv",
-					"comments.idx",
+				_, err := store.AppendUniqueCommentsCSV(
+					noteId,
 					items,
 					func(item any) (string, error) { return item.(*Comment).Id, nil },
 					(&Comment{}).CSVHeader(),
@@ -430,10 +428,8 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
 					comments[i].NoteId = noteId
 					items = append(items, comments[i])
 				}
-				_, err := store.AppendUniqueJSONL(
-					store.NoteDir(noteId),
-					"comments.jsonl",
-					"comments.idx",
+				_, err := store.AppendUniqueCommentsJSONL(
+					noteId,
 					items,
 					func(item any) (string, error) { return item.(Comment).Id, nil },
 				)

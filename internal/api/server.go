@@ -1,0 +1,70 @@
+package api
+
+import (
+	"encoding/json"
+	"net/http"
+	"time"
+)
+
+type Server struct {
+	manager *TaskManager
+	mux     *http.ServeMux
+}
+
+func NewServer(manager *TaskManager) *Server {
+	if manager == nil {
+		manager = NewTaskManager()
+	}
+	s := &Server{
+		manager: manager,
+		mux:     http.NewServeMux(),
+	}
+	s.routes()
+	return s
+}
+
+func (s *Server) Handler() http.Handler {
+	return s.mux
+}
+
+func (s *Server) routes() {
+	s.mux.HandleFunc("GET /healthz", s.handleHealthz)
+	s.mux.HandleFunc("GET /status", s.handleStatus)
+	s.mux.HandleFunc("POST /run", s.handleRun)
+	s.mux.HandleFunc("POST /stop", s.handleStop)
+}
+
+func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.manager.Status())
+}
+
+func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
+	var req RunRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := s.manager.Run(req); err != nil {
+		writeJSON(w, http.StatusConflict, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusAccepted, s.manager.Status())
+}
+
+func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
+	stopped := s.manager.Stop()
+	writeJSON(w, http.StatusAccepted, map[string]any{"stopped": stopped})
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("content-type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(v)
+}
+
+func nowUnix() int64 {
+	return time.Now().Unix()
+}
