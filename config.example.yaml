@@ -6,6 +6,9 @@ LOGIN_WAIT_TIMEOUT_SEC: 120
 # Storage
 STORE_BACKEND: "file" # file | sqlite
 SQLITE_PATH: "data/media_crawler.db"
+# Logging
+LOG_LEVEL: "info" # debug | info | warn | error
+LOG_FORMAT: "json" # json | text
 # HTTP
 HTTP_TIMEOUT_SEC: 60
 HTTP_RETRY_COUNT: 3

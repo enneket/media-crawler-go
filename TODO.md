@@ -55,4 +55,4 @@
 - [x] T-004 增加 API Server：/healthz、/run、/stop、/status。
 - [ ] T-005 补齐其他平台：先实现 B 站 detail 最小闭环。
 - [ ] T-006 补齐其他平台：再实现 微博 detail 最小闭环。
-- [ ] T-007 增加统一 logger（结构化）并替换 fmt.Printf。
+- [x] T-007 增加统一 logger（结构化）并替换 fmt.Printf。

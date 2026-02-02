@@ -7,6 +7,7 @@ import (
 	"media-crawler-go/internal/browser"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/downloader"
+	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/proxy"
 	"media-crawler-go/internal/store"
 	"os"
@@ -35,12 +36,12 @@ func NewCrawler() *DouyinCrawler {
 }
 
 func (c *DouyinCrawler) Start(ctx context.Context) error {
-	fmt.Println("DouyinCrawler started...")
+	logger.Info("douyin crawler started")
 
 	if config.AppConfig.EnableIPProxy {
 		provider, err := proxy.NewProvider(config.AppConfig.IPProxyProviderName)
 		if err != nil {
-			fmt.Printf("Warning: proxy provider init failed: %v\n", err)
+			logger.Warn("proxy provider init failed", "err", err)
 		} else {
 			c.proxyPool = proxy.NewPool(provider, config.AppConfig.IPProxyPoolCount)
 		}
@@ -124,7 +125,7 @@ func (c *DouyinCrawler) initBrowser(ctx context.Context) error {
 			c.page.AddInitScript(playwright.Script{Content: playwright.String("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")})
 			return nil
 		}
-		fmt.Printf("Warning: CDP mode init failed, falling back to persistent context: %v\n", err)
+		logger.Warn("cdp mode init failed; falling back to persistent context", "err", err)
 	}
 
 	launchOpts := playwright.BrowserTypeLaunchPersistentContextOptions{
@@ -185,7 +186,7 @@ func (c *DouyinCrawler) login(ctx context.Context) error {
 	if ok := c.isLoggedIn(); ok {
 		return nil
 	}
-	fmt.Println("Not logged in. Please log in manually in the browser window.")
+	logger.Info("not logged in; log in manually in browser window")
 	timeoutSec := config.AppConfig.LoginWaitTimeoutSec
 	if timeoutSec <= 0 {
 		timeoutSec = 120
@@ -248,7 +249,7 @@ func buildCookiesForDouyin(cookieStr string) []playwright.OptionalCookie {
 
 func (c *DouyinCrawler) runDetailMode(ctx context.Context) error {
 	inputs := config.AppConfig.DouyinSpecifiedNoteUrls
-	fmt.Printf("Running detail mode with %d inputs\n", len(inputs))
+	logger.Info("running detail mode", "inputs", len(inputs))
 	if len(inputs) == 0 {
 		return fmt.Errorf("DY_SPECIFIED_NOTE_URL_LIST is empty")
 	}
@@ -265,7 +266,7 @@ func (c *DouyinCrawler) runDetailMode(ctx context.Context) error {
 	for _, input := range inputs {
 		awemeID := resolveAwemeID(input)
 		if awemeID == "" {
-			fmt.Printf("Skip invalid douyin url/id: %s\n", input)
+			logger.Warn("skip invalid douyin url/id", "value", input)
 			continue
 		}
 		ids = append(ids, awemeID)
@@ -276,7 +277,7 @@ func (c *DouyinCrawler) runDetailMode(ctx context.Context) error {
 
 func (c *DouyinCrawler) runCreatorMode(ctx context.Context) error {
 	inputs := config.AppConfig.DouyinCreatorIdList
-	fmt.Printf("Running creator mode with %d inputs\n", len(inputs))
+	logger.Info("running creator mode", "inputs", len(inputs))
 	if len(inputs) == 0 {
 		return fmt.Errorf("DY_CREATOR_ID_LIST is empty")
 	}
@@ -292,15 +293,15 @@ func (c *DouyinCrawler) runCreatorMode(ctx context.Context) error {
 	for _, input := range inputs {
 		secUserID := ExtractSecUserID(input)
 		if secUserID == "" {
-			fmt.Printf("Skip invalid creator id/url: %s\n", input)
+			logger.Warn("skip invalid creator id/url", "value", input)
 			continue
 		}
-		fmt.Printf("Fetching creator profile: %s\n", secUserID)
+		logger.Info("fetching creator profile", "creator_id", secUserID)
 		profile, err := c.client.GetUserInfo(ctx, secUserID, msToken)
 		if err == nil {
 			_ = store.SaveCreatorProfile(secUserID, profile)
 		} else {
-			fmt.Printf("Failed to fetch creator profile %s: %v\n", secUserID, err)
+			logger.Error("fetch creator profile failed", "creator_id", secUserID, "err", err)
 		}
 
 		maxCursor := ""
@@ -336,7 +337,7 @@ func (c *DouyinCrawler) runCreatorMode(ctx context.Context) error {
 
 func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
 	keywords := config.GetKeywords()
-	fmt.Printf("Running search mode with %d keywords\n", len(keywords))
+	logger.Info("running search mode", "keywords", len(keywords))
 	if len(keywords) == 0 {
 		return fmt.Errorf("KEYWORDS is empty")
 	}
@@ -412,7 +413,7 @@ func resolveAwemeID(input string) string {
 }
 
 func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msToken string) error {
-	fmt.Printf("Fetching aweme_id: %s\n", awemeID)
+	logger.Info("fetching aweme", "aweme_id", awemeID)
 	detail, err := c.client.GetVideoByID(ctx, awemeID, msToken, "")
 	if err != nil {
 		return err
@@ -442,7 +443,7 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 			config.AppConfig.EnableGetSubComments,
 		)
 		if err != nil {
-			fmt.Printf("Failed to fetch comments %s: %v\n", awemeID, err)
+			logger.Error("fetch comments failed", "aweme_id", awemeID, "err", err)
 		} else {
 			if config.AppConfig.SaveDataOption == "csv" {
 				items := make([]any, 0, len(comments))
@@ -457,7 +458,7 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
 				)
 				if err != nil {
-					fmt.Printf("Failed to save comments csv %s: %v\n", awemeID, err)
+					logger.Error("save comments csv failed", "aweme_id", awemeID, "err", err)
 				}
 			} else {
 				items := make([]any, 0, len(comments))
@@ -470,7 +471,7 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 					func(item any) (string, error) { return item.(Comment).CID, nil },
 				)
 				if err != nil {
-					fmt.Printf("Failed to save comments %s: %v\n", awemeID, err)
+					logger.Error("save comments failed", "aweme_id", awemeID, "err", err)
 				}
 			}
 		}
@@ -545,7 +546,7 @@ func (c *DouyinCrawler) processAwemeIDs(ctx context.Context, ids []string, msTok
 	if n <= 1 {
 		for _, id := range uniq {
 			if err := c.processOneAweme(ctx, id, msToken); err != nil {
-				fmt.Printf("Failed to process %s: %v\n", id, err)
+				logger.Error("process failed", "id", id, "err", err)
 			}
 		}
 		return
@@ -564,7 +565,7 @@ func (c *DouyinCrawler) processAwemeIDs(ctx context.Context, ids []string, msTok
 				default:
 				}
 				if err := c.processOneAweme(ctx, id, msToken); err != nil {
-					fmt.Printf("Failed to process %s: %v\n", id, err)
+					logger.Error("process failed", "id", id, "err", err)
 				}
 			}
 		}()

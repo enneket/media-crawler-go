@@ -6,6 +6,7 @@ import (
 	"media-crawler-go/internal/browser"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/downloader"
+	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/proxy"
 	"media-crawler-go/internal/store"
 	"os"
@@ -35,17 +36,17 @@ func NewCrawler() *XhsCrawler {
 }
 
 func (c *XhsCrawler) Start(ctx context.Context) error {
-	fmt.Println("XhsCrawler started...")
+	logger.Info("xhs crawler started")
 
 	if config.AppConfig.EnableIPProxy {
 		provider, err := proxy.NewProvider(config.AppConfig.IPProxyProviderName)
 		if err != nil {
-			fmt.Printf("Warning: proxy provider init failed: %v\n", err)
+			logger.Warn("proxy provider init failed", "err", err)
 		} else {
 			pool := proxy.NewPool(provider, config.AppConfig.IPProxyPoolCount)
 			p, err := pool.GetOrRefresh(ctx)
 			if err != nil {
-				fmt.Printf("Warning: proxy pool fetch failed: %v\n", err)
+				logger.Warn("proxy pool fetch failed", "err", err)
 			} else {
 				c.proxyPool = pool
 				c.proxy = &p
@@ -72,7 +73,7 @@ func (c *XhsCrawler) Start(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Println("Login successful!")
+	logger.Info("login successful")
 
 	switch config.AppConfig.CrawlerType {
 	case "search":
@@ -93,7 +94,7 @@ func (c *XhsCrawler) login(ctx context.Context) error {
 		cookies := buildCookies(config.AppConfig.Cookies)
 		if len(cookies) > 0 {
 			if err := c.browser.AddCookies(cookies); err != nil {
-				fmt.Printf("Warning: failed to add cookies: %v\n", err)
+				logger.Warn("failed to add cookies", "err", err)
 			}
 		}
 	}
@@ -119,7 +120,7 @@ func (c *XhsCrawler) login(ctx context.Context) error {
 		return fmt.Errorf("invalid LOGIN_TYPE: %s (supported: qrcode|phone|cookie)", loginType)
 	}
 
-	fmt.Printf("Not logged in. Please complete %s login in the browser window.\n", loginType)
+	logger.Info("not logged in; complete login in browser window", "login_type", loginType)
 	timeoutSec := config.AppConfig.LoginWaitTimeoutSec
 	if timeoutSec <= 0 {
 		timeoutSec = 120
@@ -133,7 +134,7 @@ func (c *XhsCrawler) login(ctx context.Context) error {
 		}
 		content, err := c.page.Content()
 		if err == nil && strings.Contains(content, "请通过验证") {
-			fmt.Println("Captcha detected: please verify manually in the browser window.")
+			logger.Warn("captcha detected; verify manually in browser window")
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -143,7 +144,7 @@ func (c *XhsCrawler) login(ctx context.Context) error {
 func (c *XhsCrawler) runSearchMode() error {
 	keywords := config.GetKeywords()
 	for _, keyword := range keywords {
-		fmt.Printf("Searching for keyword: %s\n", keyword)
+		logger.Info("searching keyword", "keyword", keyword)
 		page := config.AppConfig.StartPage
 		if page < 1 {
 			page = 1
@@ -160,16 +161,16 @@ func (c *XhsCrawler) runSearchMode() error {
 		for {
 			res, err := c.client.GetNoteByKeyword(keyword, page)
 			if err != nil {
-				fmt.Printf("Search failed (page=%d): %v\n", page, err)
+				logger.Error("search failed", "page", page, "err", err)
 				break
 			}
 
 			if len(res.Items) == 0 {
-				fmt.Printf("No items found (page=%d)\n", page)
+				logger.Info("no items found", "page", page)
 				break
 			}
 
-			fmt.Printf("Page %d: %d items\n", page, len(res.Items))
+			logger.Info("search page items", "page", page, "items", len(res.Items))
 
 			sem := make(chan struct{}, concurrency)
 			var wg sync.WaitGroup
@@ -196,7 +197,7 @@ func (c *XhsCrawler) runSearchMode() error {
 				go func(noteId, xsecSource, xsecToken, nickname, title string) {
 					defer wg.Done()
 					defer func() { <-sem }()
-					fmt.Printf("- [%s] %s (ID: %s)\n", nickname, title, noteId)
+					logger.Info("note", "nickname", nickname, "title", title, "note_id", noteId)
 					c.processNote(noteId, xsecSource, xsecToken)
 				}(noteId, item.XsecSource, item.XsecToken, item.NoteCard.User.Nickname, item.NoteCard.Title)
 			}
@@ -219,14 +220,14 @@ func (c *XhsCrawler) runSearchMode() error {
 
 func (c *XhsCrawler) runDetailMode() error {
 	urls := config.AppConfig.XhsSpecifiedNoteUrls
-	fmt.Printf("Running detail mode with %d urls\n", len(urls))
+	logger.Info("running detail mode", "urls", len(urls))
 	for _, url := range urls {
 		noteId := extractNoteId(url)
 		if noteId == "" {
-			fmt.Printf("Invalid URL: %s\n", url)
+			logger.Warn("invalid url", "url", url)
 			continue
 		}
-		fmt.Printf("Processing note ID: %s\n", noteId)
+		logger.Info("processing note", "note_id", noteId)
 		c.processNote(noteId, "", "")
 		time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
 	}
@@ -235,17 +236,17 @@ func (c *XhsCrawler) runDetailMode() error {
 
 func (c *XhsCrawler) runCreatorMode() error {
 	creatorIds := config.AppConfig.XhsCreatorIdList
-	fmt.Printf("Running creator mode with %d creators\n", len(creatorIds))
+	logger.Info("running creator mode", "creators", len(creatorIds))
 	for _, userId := range creatorIds {
 		creatorID := ExtractCreatorID(userId)
 		if creatorID == "" {
-			fmt.Printf("Invalid creator ID/URL: %s\n", userId)
+			logger.Warn("invalid creator id/url", "value", userId)
 			continue
 		}
-		fmt.Printf("Processing creator ID: %s\n", creatorID)
+		logger.Info("processing creator", "creator_id", creatorID)
 
 		if err := c.fetchAndSaveCreator(creatorID); err != nil {
-			fmt.Printf("Failed to fetch creator info %s: %v\n", creatorID, err)
+			logger.Error("fetch creator info failed", "creator_id", creatorID, "err", err)
 		}
 
 		maxNotes := config.AppConfig.CrawlerMaxNotesCount
@@ -260,11 +261,11 @@ func (c *XhsCrawler) runCreatorMode() error {
 		for {
 			res, err := c.client.GetNotesByCreator(creatorID, cursor)
 			if err != nil {
-				fmt.Printf("Failed to get notes for creator %s: %v\n", creatorID, err)
+				logger.Error("get notes for creator failed", "creator_id", creatorID, "err", err)
 				break
 			}
 
-			fmt.Printf("Found %d notes for creator %s\n", len(res.Notes), creatorID)
+			logger.Info("creator notes", "creator_id", creatorID, "notes", len(res.Notes))
 			sem := make(chan struct{}, concurrency)
 			var wg sync.WaitGroup
 
@@ -286,7 +287,7 @@ func (c *XhsCrawler) runCreatorMode() error {
 				go func(note Note) {
 					defer wg.Done()
 					defer func() { <-sem }()
-					fmt.Printf("- [%s] %s (ID: %s)\n", note.User.Nickname, note.Title, note.NoteId)
+					logger.Info("note", "nickname", note.User.Nickname, "title", note.Title, "note_id", note.NoteId)
 					c.processNote(note.NoteId, note.XsecSource, note.XsecToken)
 				}(note)
 			}
@@ -338,17 +339,17 @@ func (c *XhsCrawler) fetchAndSaveCreator(userID string) error {
 }
 
 func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
-	fmt.Printf("  Fetching detail for note %s...\n", noteId)
+	logger.Info("fetching note detail", "note_id", noteId)
 	noteDetail, err := c.client.GetNoteById(noteId, xsecSource, xsecToken)
 	if err != nil {
-		fmt.Printf("  Failed to get note detail: %v\n", err)
+		logger.Error("get note detail failed", "note_id", noteId, "err", err)
 		return
 	}
 
 	if err := store.SaveNoteDetail(noteId, &noteDetail); err != nil {
-		fmt.Printf("  Failed to save note: %v\n", err)
+		logger.Error("save note failed", "note_id", noteId, "err", err)
 	} else {
-		fmt.Printf("  Note saved.\n")
+		logger.Info("note saved", "note_id", noteId)
 	}
 
 	// Download Medias
@@ -386,7 +387,7 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
 		}
 
 		if len(urls) > 0 {
-			fmt.Printf("  Downloading %d media files...\n", len(urls))
+			logger.Info("downloading media files", "note_id", noteId, "count", len(urls))
 			noteDownloader := downloader.NewDownloader(store.NoteMediaDir(noteId))
 			noteDownloader.BatchDownload(urls, filenames)
 		}
@@ -399,12 +400,12 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
 			token = noteDetail.XsecToken
 		}
 
-		fmt.Printf("  Fetching comments for note %s...\n", noteId)
+		logger.Info("fetching comments", "note_id", noteId)
 		comments, err := c.fetchAllComments(noteId, token)
 		if err != nil {
-			fmt.Printf("  Failed to get comments: %v\n", err)
+			logger.Error("get comments failed", "note_id", noteId, "err", err)
 		} else {
-			fmt.Printf("  Found %d comments\n", len(comments))
+			logger.Info("comments fetched", "note_id", noteId, "comments", len(comments))
 			if config.AppConfig.SaveDataOption == "csv" {
 				items := make([]any, 0, len(comments))
 				for i := range comments {
@@ -420,7 +421,7 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
 					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
 				)
 				if err != nil {
-					fmt.Printf("  Failed to save comment CSV: %v\n", err)
+					logger.Error("save comments csv failed", "note_id", noteId, "err", err)
 				}
 			} else {
 				items := make([]any, 0, len(comments))
@@ -434,7 +435,7 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
 					func(item any) (string, error) { return item.(Comment).Id, nil },
 				)
 				if err != nil {
-					fmt.Printf("  Failed to save comments: %v\n", err)
+					logger.Error("save comments failed", "note_id", noteId, "err", err)
 				}
 			}
 		}
@@ -608,7 +609,7 @@ func (c *XhsCrawler) initBrowser() error {
 			c.page.AddInitScript(playwright.Script{Content: playwright.String("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")})
 			return nil
 		}
-		fmt.Printf("Warning: CDP mode init failed, falling back to persistent context: %v\n", err)
+		logger.Warn("cdp mode init failed; falling back to persistent context", "err", err)
 	}
 
 	launchOpts := playwright.BrowserTypeLaunchPersistentContextOptions{

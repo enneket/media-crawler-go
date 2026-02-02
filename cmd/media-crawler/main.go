@@ -4,9 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"media-crawler-go/internal/api"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/platform"
 	_ "media-crawler-go/internal/platform/douyin"
 	_ "media-crawler-go/internal/platform/xhs"
@@ -21,32 +21,34 @@ func main() {
 	flag.Parse()
 
 	if err := config.LoadConfig(*configPath); err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		fmt.Printf("Failed to load config: %v\n", err)
+		os.Exit(1)
 	}
+	logger.InitFromConfig()
 
 	if *apiMode {
 		srv := api.NewServer(nil)
-		fmt.Printf("Starting api server at %s\n", *apiAddr)
+		logger.Info("starting api server", "addr", *apiAddr)
 		if err := http.ListenAndServe(*apiAddr, srv.Handler()); err != nil {
-			log.Printf("Api server failed: %v", err)
+			logger.Error("api server failed", "err", err)
 			os.Exit(1)
 		}
 		return
 	}
 
-	fmt.Printf("Starting crawler for platform: %s\n", config.AppConfig.Platform)
+	logger.Info("starting crawler", "platform", config.AppConfig.Platform)
 
 	c, err := platform.New(config.AppConfig.Platform)
 	if err != nil {
-		log.Printf("Crawler init failed: %v", err)
+		logger.Error("crawler init failed", "err", err)
 		os.Exit(1)
 	}
 	err = c.Start(context.Background())
 
 	if err != nil {
-		log.Printf("Crawler failed: %v", err)
+		logger.Error("crawler failed", "err", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("Crawler finished successfully")
+	logger.Info("crawler finished successfully")
 }

@@ -3,6 +3,7 @@ package downloader
 import (
 	"fmt"
 	"io"
+	"media-crawler-go/internal/logger"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -130,7 +131,7 @@ func (d *Downloader) BatchDownload(urls []string, filenames []string) []error {
 			defer wg.Done()
 			if err := d.Download(u, f); err != nil {
 				errors[i] = err
-				fmt.Printf("Failed to download %s: %v\n", u, err)
+				logger.Error("download failed", "url", u, "err", err)
 			}
 		}(i, url, filenames[i])
 	}
@@ -153,7 +154,7 @@ func (d *Downloader) BatchDownloadWithHeaders(urls []string, filenames []string,
 			defer wg.Done()
 			if err := d.DownloadWithHeaders(u, f, headers); err != nil {
 				errors[i] = err
-				fmt.Printf("Failed to download %s: %v\n", u, err)
+				logger.Error("download failed", "url", u, "err", err)
 			}
 		}(i, url, filenames[i])
 	}

@@ -16,6 +16,8 @@ type Config struct {
 	CrawlerType          string `mapstructure:"CRAWLER_TYPE"`
 	StoreBackend         string `mapstructure:"STORE_BACKEND"`
 	SQLitePath           string `mapstructure:"SQLITE_PATH"`
+	LogLevel             string `mapstructure:"LOG_LEVEL"`
+	LogFormat            string `mapstructure:"LOG_FORMAT"`
 	HttpTimeoutSec       int    `mapstructure:"HTTP_TIMEOUT_SEC"`
 	HttpRetryCount       int    `mapstructure:"HTTP_RETRY_COUNT"`
 	HttpRetryBaseDelayMs int    `mapstructure:"HTTP_RETRY_BASE_DELAY_MS"`
@@ -68,6 +70,8 @@ func LoadConfig(path string) error {
 	viper.SetDefault("CRAWLER_TYPE", "search")
 	viper.SetDefault("STORE_BACKEND", "file")
 	viper.SetDefault("SQLITE_PATH", "data/media_crawler.db")
+	viper.SetDefault("LOG_LEVEL", "info")
+	viper.SetDefault("LOG_FORMAT", "json")
 	viper.SetDefault("HTTP_TIMEOUT_SEC", 60)
 	viper.SetDefault("HTTP_RETRY_COUNT", 3)
 	viper.SetDefault("HTTP_RETRY_BASE_DELAY_MS", 500)
