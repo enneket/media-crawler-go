@@ -39,13 +39,14 @@ type Request struct {
 }
 
 type Result struct {
-	Platform   string `json:"platform,omitempty"`
-	Mode       string `json:"mode,omitempty"`
-	StartedAt  int64  `json:"started_at,omitempty"`
-	FinishedAt int64  `json:"finished_at,omitempty"`
-	Processed  int    `json:"processed,omitempty"`
-	Succeeded  int    `json:"succeeded,omitempty"`
-	Failed     int    `json:"failed,omitempty"`
+	Platform     string         `json:"platform,omitempty"`
+	Mode         string         `json:"mode,omitempty"`
+	StartedAt    int64          `json:"started_at,omitempty"`
+	FinishedAt   int64          `json:"finished_at,omitempty"`
+	Processed    int            `json:"processed,omitempty"`
+	Succeeded    int            `json:"succeeded,omitempty"`
+	Failed       int            `json:"failed,omitempty"`
+	FailureKinds map[string]int `json:"failure_kinds,omitempty"`
 }
 
 func NewResult(req Request) Result {

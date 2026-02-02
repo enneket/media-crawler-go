@@ -94,6 +94,7 @@ func (c *Crawler) Run(ctx context.Context, req crawler.Request) (crawler.Result,
 	out.Processed = r.Processed
 	out.Succeeded = r.Succeeded
 	out.Failed = r.Failed
+	out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, r.FailureKinds)
 	out.FinishedAt = time.Now().Unix()
 	return out, nil
 }

@@ -76,6 +76,7 @@ func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.R
 	out.Processed = itemRes.Processed
 	out.Succeeded = itemRes.Succeeded
 	out.Failed = itemRes.Failed
+	out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, itemRes.FailureKinds)
 	out.FinishedAt = time.Now().Unix()
 	return out, nil
 }

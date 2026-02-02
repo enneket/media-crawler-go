@@ -53,9 +53,9 @@ func main() {
 	res, err := r.Run(context.Background(), req)
 
 	if err != nil {
-		logger.Error("crawler failed", "err", err, "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed)
+		logger.Error("crawler failed", "err", err, "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed, "failure_kinds", res.FailureKinds)
 		os.Exit(1)
 	}
 
-	logger.Info("crawler finished successfully", "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed)
+	logger.Info("crawler finished successfully", "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed, "failure_kinds", res.FailureKinds)
 }

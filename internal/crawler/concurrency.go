@@ -5,9 +5,10 @@ import (
 )
 
 type ItemResult struct {
-	Processed int
-	Succeeded int
-	Failed    int
+	Processed    int
+	Succeeded    int
+	Failed       int
+	FailureKinds map[string]int
 }
 
 func ForEachLimit[T any](ctx context.Context, items []T, limit int, fn func(context.Context, T) error) ItemResult {
@@ -25,6 +26,7 @@ func ForEachLimit[T any](ctx context.Context, items []T, limit int, fn func(cont
 			out.Processed++
 			if err := fn(ctx, it); err != nil {
 				out.Failed++
+				out.FailureKinds = mergeFailureKind(out.FailureKinds, KindOf(err))
 				continue
 			}
 			out.Succeeded++
@@ -62,9 +64,21 @@ func ForEachLimit[T any](ctx context.Context, items []T, limit int, fn func(cont
 		err := <-res
 		if err != nil {
 			out.Failed++
+			out.FailureKinds = mergeFailureKind(out.FailureKinds, KindOf(err))
 			continue
 		}
 		out.Succeeded++
 	}
 	return out
+}
+
+func mergeFailureKind(m map[string]int, kind ErrorKind) map[string]int {
+	if kind == "" {
+		kind = ErrorKindUnknown
+	}
+	if m == nil {
+		m = make(map[string]int, 1)
+	}
+	m[string(kind)]++
+	return m
 }

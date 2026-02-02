@@ -13,15 +13,16 @@ import (
 )
 
 type Status struct {
-	State      string `json:"state"`
-	Platform   string `json:"platform,omitempty"`
-	Crawler    string `json:"crawler_type,omitempty"`
-	StartedAt  int64  `json:"started_at,omitempty"`
-	FinishedAt int64  `json:"finished_at,omitempty"`
-	Processed  int    `json:"processed,omitempty"`
-	Succeeded  int    `json:"succeeded,omitempty"`
-	Failed     int    `json:"failed,omitempty"`
-	LastError  string `json:"last_error,omitempty"`
+	State        string         `json:"state"`
+	Platform     string         `json:"platform,omitempty"`
+	Crawler      string         `json:"crawler_type,omitempty"`
+	StartedAt    int64          `json:"started_at,omitempty"`
+	FinishedAt   int64          `json:"finished_at,omitempty"`
+	Processed    int            `json:"processed,omitempty"`
+	Succeeded    int            `json:"succeeded,omitempty"`
+	Failed       int            `json:"failed,omitempty"`
+	FailureKinds map[string]int `json:"failure_kinds,omitempty"`
+	LastError    string         `json:"last_error,omitempty"`
 }
 
 type RunRequest struct {
@@ -116,6 +117,7 @@ func (m *TaskManager) Run(req RunRequest) error {
 		m.status.Processed = res.Processed
 		m.status.Succeeded = res.Succeeded
 		m.status.Failed = res.Failed
+		m.status.FailureKinds = res.FailureKinds
 		if err != nil {
 			m.status.LastError = err.Error()
 		} else {

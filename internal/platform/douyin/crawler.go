@@ -296,6 +296,7 @@ func (c *DouyinCrawler) runDetailMode(ctx context.Context, req crawler.Request, 
 	out.Processed = r.Processed
 	out.Succeeded = r.Succeeded
 	out.Failed = r.Failed
+	out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, r.FailureKinds)
 	out.FinishedAt = time.Now().Unix()
 	return out, nil
 }
@@ -357,6 +358,7 @@ func (c *DouyinCrawler) runCreatorMode(ctx context.Context, req crawler.Request,
 			out.Succeeded += r.Succeeded
 			out.Failed += r.Failed
 			out.Processed += r.Processed
+			out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, r.FailureKinds)
 			if config.AppConfig.CrawlerMaxSleepSec > 0 {
 				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
 			}
@@ -427,6 +429,7 @@ func (c *DouyinCrawler) runSearchMode(ctx context.Context, req crawler.Request, 
 			out.Succeeded += r.Succeeded
 			out.Failed += r.Failed
 			out.Processed += r.Processed
+			out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, r.FailureKinds)
 			page++
 			if config.AppConfig.CrawlerMaxSleepSec > 0 {
 				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)

@@ -244,6 +244,7 @@ func (c *XhsCrawler) runSearchMode(ctx context.Context, req crawler.Request) (cr
 			out.Succeeded += r.Succeeded
 			out.Failed += r.Failed
 			out.Processed += r.Processed
+			out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, r.FailureKinds)
 
 			if maxNotes > 0 && out.Processed >= maxNotes {
 				break
@@ -292,6 +293,7 @@ func (c *XhsCrawler) runDetailMode(ctx context.Context, req crawler.Request) (cr
 	out.Processed = r.Processed
 	out.Succeeded = r.Succeeded
 	out.Failed = r.Failed
+	out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, r.FailureKinds)
 	out.FinishedAt = time.Now().Unix()
 	return out, nil
 }
@@ -377,6 +379,7 @@ func (c *XhsCrawler) runCreatorMode(ctx context.Context, req crawler.Request) (c
 			out.Succeeded += r.Succeeded
 			out.Failed += r.Failed
 			out.Processed += r.Processed
+			out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, r.FailureKinds)
 
 			if maxNotes > 0 && processed >= maxNotes {
 				break
