@@ -45,6 +45,14 @@ func New(name string) (crawler.Crawler, error) {
 	return f(), nil
 }
 
+func Exists(name string) bool {
+	n := normalize(name)
+	mu.RLock()
+	_, ok := factories[n]
+	mu.RUnlock()
+	return ok
+}
+
 func Names() []string {
 	mu.RLock()
 	defer mu.RUnlock()

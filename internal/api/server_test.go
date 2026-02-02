@@ -4,14 +4,21 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"media-crawler-go/internal/config"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
+
+	_ "media-crawler-go/internal/platform/bilibili"
+	_ "media-crawler-go/internal/platform/douyin"
+	_ "media-crawler-go/internal/platform/weibo"
+	_ "media-crawler-go/internal/platform/xhs"
 )
 
 func TestServerRunStopStatus(t *testing.T) {
+	config.AppConfig = config.Config{}
 	done := make(chan struct{})
 	runFn := func(ctx context.Context) error {
 		close(done)
@@ -29,7 +36,7 @@ func TestServerRunStopStatus(t *testing.T) {
 		t.Fatalf("healthz code=%d body=%s", w1.Code, w1.Body.String())
 	}
 
-	body, _ := json.Marshal(RunRequest{Platform: "xhs", CrawlerType: "search"})
+	body, _ := json.Marshal(RunRequest{Platform: "xhs", CrawlerType: "search", Keywords: "golang"})
 	r2 := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
 	w2 := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(w2, r2)
@@ -58,6 +65,57 @@ func TestServerRunStopStatus(t *testing.T) {
 	}
 }
 
+func TestServerRunValidation(t *testing.T) {
+	config.AppConfig = config.Config{}
+	runFn := func(ctx context.Context) error { return nil }
+	srv := NewServer(NewTaskManagerWithRunner(runFn))
+
+	{
+		config.AppConfig = config.Config{}
+		body, _ := json.Marshal(RunRequest{Platform: "xhs", CrawlerType: "search"})
+		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+	{
+		config.AppConfig = config.Config{}
+		body, _ := json.Marshal(RunRequest{Platform: "nope", CrawlerType: "detail"})
+		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+	{
+		config.AppConfig = config.Config{}
+		body, _ := json.Marshal(RunRequest{Platform: "bilibili", CrawlerType: "detail"})
+		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400, got=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+	{
+		config.AppConfig = config.Config{}
+		body, _ := json.Marshal(RunRequest{
+			Platform:               "bilibili",
+			CrawlerType:            "detail",
+			BiliSpecifiedVideoUrls: []string{"BV1Q5411W7bH"},
+		})
+		r := httptest.NewRequest(http.MethodPost, "/run", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusAccepted {
+			t.Fatalf("expected 202, got=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+}
+
 func TestTaskManagerRunConflict(t *testing.T) {
 	var started sync.Once
 	block := make(chan struct{})
@@ -68,6 +126,7 @@ func TestTaskManagerRunConflict(t *testing.T) {
 	}
 
 	m := NewTaskManagerWithRunner(runFn)
+	config.AppConfig = config.Config{Platform: "xhs", CrawlerType: "search", Keywords: "golang"}
 	if err := m.Run(RunRequest{}); err != nil {
 		t.Fatalf("first run err: %v", err)
 	}

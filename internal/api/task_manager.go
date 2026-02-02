@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/platform"
 	"strings"
@@ -23,6 +24,19 @@ type RunRequest struct {
 	Platform    string `json:"platform,omitempty"`
 	CrawlerType string `json:"crawler_type,omitempty"`
 	Keywords    string `json:"keywords,omitempty"`
+
+	XhsSpecifiedNoteUrls []string `json:"xhs_specified_note_url_list,omitempty"`
+	XhsCreatorIdList     []string `json:"xhs_creator_id_list,omitempty"`
+
+	DouyinSpecifiedNoteUrls []string `json:"dy_specified_note_url_list,omitempty"`
+	DouyinCreatorIdList     []string `json:"dy_creator_id_list,omitempty"`
+
+	BiliSpecifiedVideoUrls []string `json:"bili_specified_video_url_list,omitempty"`
+	WBSpecifiedNoteUrls    []string `json:"wb_specified_note_url_list,omitempty"`
+
+	StoreBackend   string `json:"store_backend,omitempty"`
+	SQLitePath     string `json:"sqlite_path,omitempty"`
+	SaveDataOption string `json:"save_data_option,omitempty"`
 }
 
 type TaskManager struct {
@@ -30,6 +44,16 @@ type TaskManager struct {
 	cancel context.CancelFunc
 	status Status
 	runFn  func(context.Context) error
+}
+
+var ErrTaskRunning = errors.New("task is running")
+
+type ValidationError struct {
+	Msg string
+}
+
+func (e ValidationError) Error() string {
+	return e.Msg
 }
 
 func NewTaskManager() *TaskManager {
@@ -53,9 +77,17 @@ func (m *TaskManager) Run(req RunRequest) error {
 	m.mu.Lock()
 	if m.cancel != nil {
 		m.mu.Unlock()
-		return errors.New("task is running")
+		return ErrTaskRunning
 	}
-	applyRunRequest(req)
+
+	nextCfg := config.AppConfig
+	applyRunRequestToConfig(&nextCfg, req)
+	if err := validateRunConfig(nextCfg); err != nil {
+		m.mu.Unlock()
+		return err
+	}
+	config.AppConfig = nextCfg
+
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancel = cancel
 	m.status = Status{
@@ -101,14 +133,123 @@ func runCrawler(ctx context.Context) error {
 	return c.Start(ctx)
 }
 
-func applyRunRequest(req RunRequest) {
+func applyRunRequestToConfig(cfg *config.Config, req RunRequest) {
+	if cfg == nil {
+		return
+	}
 	if v := strings.TrimSpace(req.Platform); v != "" {
-		config.AppConfig.Platform = v
+		cfg.Platform = v
 	}
 	if v := strings.TrimSpace(req.CrawlerType); v != "" {
-		config.AppConfig.CrawlerType = v
+		cfg.CrawlerType = v
 	}
 	if v := strings.TrimSpace(req.Keywords); v != "" {
-		config.AppConfig.Keywords = v
+		cfg.Keywords = v
 	}
+	if len(req.XhsSpecifiedNoteUrls) > 0 {
+		cfg.XhsSpecifiedNoteUrls = req.XhsSpecifiedNoteUrls
+	}
+	if len(req.XhsCreatorIdList) > 0 {
+		cfg.XhsCreatorIdList = req.XhsCreatorIdList
+	}
+	if len(req.DouyinSpecifiedNoteUrls) > 0 {
+		cfg.DouyinSpecifiedNoteUrls = req.DouyinSpecifiedNoteUrls
+	}
+	if len(req.DouyinCreatorIdList) > 0 {
+		cfg.DouyinCreatorIdList = req.DouyinCreatorIdList
+	}
+	if len(req.BiliSpecifiedVideoUrls) > 0 {
+		cfg.BiliSpecifiedVideoUrls = req.BiliSpecifiedVideoUrls
+	}
+	if len(req.WBSpecifiedNoteUrls) > 0 {
+		cfg.WBSpecifiedNoteUrls = req.WBSpecifiedNoteUrls
+	}
+	if v := strings.TrimSpace(req.StoreBackend); v != "" {
+		cfg.StoreBackend = v
+	}
+	if v := strings.TrimSpace(req.SQLitePath); v != "" {
+		cfg.SQLitePath = v
+	}
+	if v := strings.TrimSpace(req.SaveDataOption); v != "" {
+		cfg.SaveDataOption = v
+	}
+}
+
+func validateRunConfig(cfg config.Config) error {
+	platformName := strings.TrimSpace(cfg.Platform)
+	if platformName == "" {
+		return ValidationError{Msg: "platform is required"}
+	}
+	if !platform.Exists(platformName) {
+		return ValidationError{Msg: fmt.Sprintf("unknown platform: %s", platformName)}
+	}
+
+	crawlerType := strings.ToLower(strings.TrimSpace(cfg.CrawlerType))
+	if crawlerType == "" {
+		crawlerType = "search"
+	}
+
+	if v := strings.ToLower(strings.TrimSpace(cfg.StoreBackend)); v != "" && v != "file" && v != "sqlite" {
+		return ValidationError{Msg: fmt.Sprintf("invalid store_backend: %s", cfg.StoreBackend)}
+	}
+	if v := strings.ToLower(strings.TrimSpace(cfg.SaveDataOption)); v != "" && v != "json" && v != "csv" {
+		return ValidationError{Msg: fmt.Sprintf("invalid save_data_option: %s", cfg.SaveDataOption)}
+	}
+
+	p := strings.ToLower(strings.TrimSpace(platformName))
+	switch p {
+	case "xhs":
+		switch crawlerType {
+		case "search":
+			if strings.TrimSpace(cfg.Keywords) == "" {
+				return ValidationError{Msg: "keywords is required for search"}
+			}
+		case "detail":
+			if len(cfg.XhsSpecifiedNoteUrls) == 0 {
+				return ValidationError{Msg: "xhs_specified_note_url_list is required for detail"}
+			}
+		case "creator":
+			if len(cfg.XhsCreatorIdList) == 0 {
+				return ValidationError{Msg: "xhs_creator_id_list is required for creator"}
+			}
+		default:
+			return ValidationError{Msg: fmt.Sprintf("unsupported crawler_type for xhs: %s", crawlerType)}
+		}
+	case "douyin", "dy":
+		switch crawlerType {
+		case "search":
+			if strings.TrimSpace(cfg.Keywords) == "" {
+				return ValidationError{Msg: "keywords is required for search"}
+			}
+		case "detail":
+			if len(cfg.DouyinSpecifiedNoteUrls) == 0 {
+				return ValidationError{Msg: "dy_specified_note_url_list is required for detail"}
+			}
+		case "creator":
+			if len(cfg.DouyinCreatorIdList) == 0 {
+				return ValidationError{Msg: "dy_creator_id_list is required for creator"}
+			}
+		default:
+			return ValidationError{Msg: fmt.Sprintf("unsupported crawler_type for douyin: %s", crawlerType)}
+		}
+	case "bilibili", "bili", "b站", "b":
+		if crawlerType != "detail" {
+			return ValidationError{Msg: "bilibili only supports crawler_type=detail"}
+		}
+		if len(cfg.BiliSpecifiedVideoUrls) == 0 {
+			return ValidationError{Msg: "bili_specified_video_url_list is required for detail"}
+		}
+	case "weibo", "wb", "微博":
+		if crawlerType != "detail" {
+			return ValidationError{Msg: "weibo only supports crawler_type=detail"}
+		}
+		if len(cfg.WBSpecifiedNoteUrls) == 0 {
+			return ValidationError{Msg: "wb_specified_note_url_list is required for detail"}
+		}
+	default:
+		if crawlerType == "search" && strings.TrimSpace(cfg.Keywords) == "" {
+			return ValidationError{Msg: "keywords is required for search"}
+		}
+	}
+	return nil
 }

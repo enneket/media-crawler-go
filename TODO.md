@@ -40,8 +40,8 @@
 ## 待转写（P0，高优先）
 - [ ] 平台接口与注册表：统一 Search/Detail/Creator 的输入输出与并发控制。
 - [x] 存储后端：SQLite（纯 Go）落地，并支持全局去重（STORE_BACKEND=sqlite，SQLITE_PATH）。
-- [ ] Web API（对齐 Python FastAPI 能力）：启动/停止任务、状态查询、运行参数校验。
-- [ ] 其他平台骨架：bili / wb / tieba / zhihu / ks（先跑通 detail + store，再补 search/creator）。
+- [x] Web API（对齐 Python FastAPI 能力）：启动/停止任务、状态查询、运行参数校验。
+- [ ] 其他平台骨架：tieba / zhihu / ks（先跑通 detail + store，再补 search/creator；bili/wb detail 已完成）。
 
 ## 待转写（P1，中优先）
 - [ ] WebUI：可视化配置、任务管理、日志与数据预览。

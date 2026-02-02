@@ -23,6 +23,13 @@ func TestRegisterAndNew(t *testing.T) {
 
 	Register("foo", []string{"bar", "Baz"}, func() crawler.Crawler { return &mockCrawler{} })
 
+	if !Exists("foo") || !Exists("bar") || !Exists("baz") {
+		t.Fatalf("expected Exists to be true for registered names")
+	}
+	if Exists("unknown") {
+		t.Fatalf("expected Exists to be false for unknown")
+	}
+
 	if _, err := New("foo"); err != nil {
 		t.Fatalf("New(foo) err: %v", err)
 	}
