@@ -54,5 +54,5 @@
 - [x] T-003 落地 SQLite 存储（notes/comments/creators）与全局去重。
 - [x] T-004 增加 API Server：/healthz、/run、/stop、/status。
 - [x] T-005 补齐其他平台：先实现 B 站 detail 最小闭环。
-- [ ] T-006 补齐其他平台：再实现 微博 detail 最小闭环。
+- [x] T-006 补齐其他平台：再实现 微博 detail 最小闭环。
 - [x] T-007 增加统一 logger（结构化）并替换 fmt.Printf。

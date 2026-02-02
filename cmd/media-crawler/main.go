@@ -10,6 +10,7 @@ import (
 	"media-crawler-go/internal/platform"
 	_ "media-crawler-go/internal/platform/bilibili"
 	_ "media-crawler-go/internal/platform/douyin"
+	_ "media-crawler-go/internal/platform/weibo"
 	_ "media-crawler-go/internal/platform/xhs"
 	"net/http"
 	"os"

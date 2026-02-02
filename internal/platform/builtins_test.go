@@ -6,6 +6,7 @@ import (
 	"media-crawler-go/internal/platform"
 	_ "media-crawler-go/internal/platform/bilibili"
 	_ "media-crawler-go/internal/platform/douyin"
+	_ "media-crawler-go/internal/platform/weibo"
 	_ "media-crawler-go/internal/platform/xhs"
 )
 
@@ -24,5 +25,11 @@ func TestBuiltinsRegistered(t *testing.T) {
 	}
 	if _, err := platform.New("bili"); err != nil {
 		t.Fatalf("New(bili) err: %v", err)
+	}
+	if _, err := platform.New("weibo"); err != nil {
+		t.Fatalf("New(weibo) err: %v", err)
+	}
+	if _, err := platform.New("wb"); err != nil {
+		t.Fatalf("New(wb) err: %v", err)
 	}
 }

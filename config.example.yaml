@@ -37,6 +37,9 @@ ENABLE_GET_MEDIAS: false
 # Bilibili (detail mode, optional)
 # BILI_SPECIFIED_VIDEO_URL_LIST:
 #   - "https://www.bilibili.com/video/BV1Q5411W7bH"
+# Weibo (detail mode, optional)
+# WB_SPECIFIED_NOTE_URL_LIST:
+#   - "https://m.weibo.cn/status/4KjD8oZ4D"
 # Set to true if you don't have a GUI environment. 
 # If HEADLESS is true, you MUST provide COOKIES below.
 HEADLESS: true

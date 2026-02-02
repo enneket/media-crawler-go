@@ -55,6 +55,9 @@ type Config struct {
 
 	// Bilibili Specific
 	BiliSpecifiedVideoUrls []string `mapstructure:"BILI_SPECIFIED_VIDEO_URL_LIST"`
+
+	// Weibo Specific
+	WBSpecifiedNoteUrls []string `mapstructure:"WB_SPECIFIED_NOTE_URL_LIST"`
 }
 
 var AppConfig Config
