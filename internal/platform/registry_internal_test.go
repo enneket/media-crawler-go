@@ -8,7 +8,9 @@ import (
 
 type mockCrawler struct{}
 
-func (m *mockCrawler) Start(ctx context.Context) error { return nil }
+func (m *mockCrawler) Run(ctx context.Context, req crawler.Request) (crawler.Result, error) {
+	return crawler.NewResult(req), nil
+}
 
 func TestRegisterAndNew(t *testing.T) {
 	mu.Lock()
@@ -21,7 +23,7 @@ func TestRegisterAndNew(t *testing.T) {
 		mu.Unlock()
 	})
 
-	Register("foo", []string{"bar", "Baz"}, func() crawler.Crawler { return &mockCrawler{} })
+	Register("foo", []string{"bar", "Baz"}, func() crawler.Runner { return &mockCrawler{} })
 
 	if !Exists("foo") || !Exists("bar") || !Exists("baz") {
 		t.Fatalf("expected Exists to be true for registered names")

@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-type Factory func() crawler.Crawler
+type Factory func() crawler.Runner
 
 var (
 	mu        sync.RWMutex
@@ -34,7 +34,7 @@ func Register(name string, aliases []string, factory Factory) {
 	}
 }
 
-func New(name string) (crawler.Crawler, error) {
+func New(name string) (crawler.Runner, error) {
 	n := normalize(name)
 	mu.RLock()
 	f := factories[n]

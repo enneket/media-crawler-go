@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"media-crawler-go/internal/browser"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/downloader"
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/proxy"
@@ -13,7 +14,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/playwright-community/playwright-go"
@@ -35,7 +35,7 @@ func NewCrawler() *XhsCrawler {
 	return &XhsCrawler{}
 }
 
-func (c *XhsCrawler) Start(ctx context.Context) error {
+func (c *XhsCrawler) Run(ctx context.Context, req crawler.Request) (crawler.Result, error) {
 	logger.Info("xhs crawler started")
 
 	if config.AppConfig.EnableIPProxy {
@@ -55,7 +55,7 @@ func (c *XhsCrawler) Start(ctx context.Context) error {
 	}
 
 	if err := c.initBrowser(); err != nil {
-		return err
+		return crawler.Result{}, err
 	}
 	defer c.close()
 
@@ -66,25 +66,35 @@ func (c *XhsCrawler) Start(ctx context.Context) error {
 	}
 
 	if config.AppConfig.Headless && config.AppConfig.LoginType != "cookie" && config.AppConfig.Cookies == "" {
-		return fmt.Errorf("HEADLESS=true requires LOGIN_TYPE=cookie and COOKIES set")
+		return crawler.Result{}, fmt.Errorf("HEADLESS=true requires LOGIN_TYPE=cookie and COOKIES set")
 	}
 
 	if err := c.login(ctx); err != nil {
-		return err
+		return crawler.Result{}, err
 	}
 
 	logger.Info("login successful")
 
-	switch config.AppConfig.CrawlerType {
-	case "search":
-		return c.runSearchMode()
-	case "detail":
-		return c.runDetailMode()
-	case "creator":
-		return c.runCreatorMode()
-	default:
-		return fmt.Errorf("unknown crawler type: %s", config.AppConfig.CrawlerType)
+	req.Platform = "xhs"
+	if req.Mode == "" {
+		req.Mode = crawler.NormalizeMode(config.AppConfig.CrawlerType)
 	}
+	out := crawler.NewResult(req)
+
+	var res crawler.Result
+	var err error
+	switch req.Mode {
+	case crawler.ModeSearch:
+		res, err = c.runSearchMode(ctx, req)
+	case crawler.ModeDetail:
+		res, err = c.runDetailMode(ctx, req)
+	case crawler.ModeCreator:
+		res, err = c.runCreatorMode(ctx, req)
+	default:
+		return crawler.Result{}, fmt.Errorf("unknown mode: %s", req.Mode)
+	}
+	res.StartedAt = out.StartedAt
+	return res, err
 }
 
 func (c *XhsCrawler) login(ctx context.Context) error {
@@ -141,70 +151,101 @@ func (c *XhsCrawler) login(ctx context.Context) error {
 	return fmt.Errorf("login timed out after %ds", timeoutSec)
 }
 
-func (c *XhsCrawler) runSearchMode() error {
-	keywords := config.GetKeywords()
+func (c *XhsCrawler) runSearchMode(ctx context.Context, req crawler.Request) (crawler.Result, error) {
+	keywords := req.Keywords
+	if len(keywords) == 0 {
+		keywords = config.GetKeywords()
+	}
+	if len(keywords) == 0 {
+		return crawler.Result{}, fmt.Errorf("empty keywords")
+	}
+
+	startPage := req.StartPage
+	if startPage <= 0 {
+		startPage = config.AppConfig.StartPage
+	}
+	if startPage < 1 {
+		startPage = 1
+	}
+	maxNotes := req.MaxNotes
+	if maxNotes == 0 {
+		maxNotes = config.AppConfig.CrawlerMaxNotesCount
+	}
+	concurrency := req.Concurrency
+	if concurrency <= 0 {
+		concurrency = config.AppConfig.MaxConcurrencyNum
+	}
+	if concurrency < 1 {
+		concurrency = 1
+	}
+
+	type noteTask struct {
+		NoteID     string
+		XsecSource string
+		XsecToken  string
+		Nickname   string
+		Title      string
+	}
+
+	out := crawler.NewResult(req)
+	seen := make(map[string]struct{})
+
 	for _, keyword := range keywords {
 		logger.Info("searching keyword", "keyword", keyword)
-		page := config.AppConfig.StartPage
-		if page < 1 {
-			page = 1
-		}
-		maxNotes := config.AppConfig.CrawlerMaxNotesCount
-		concurrency := config.AppConfig.MaxConcurrencyNum
-		if concurrency < 1 {
-			concurrency = 1
-		}
-
-		processed := 0
-		seen := make(map[string]struct{})
-
+		page := startPage
 		for {
+			select {
+			case <-ctx.Done():
+				out.FinishedAt = time.Now().Unix()
+				return out, ctx.Err()
+			default:
+			}
+
 			res, err := c.client.GetNoteByKeyword(keyword, page)
 			if err != nil {
 				logger.Error("search failed", "page", page, "err", err)
 				break
 			}
-
 			if len(res.Items) == 0 {
 				logger.Info("no items found", "page", page)
 				break
 			}
-
 			logger.Info("search page items", "page", page, "items", len(res.Items))
 
-			sem := make(chan struct{}, concurrency)
-			var wg sync.WaitGroup
-
+			tasks := make([]noteTask, 0, len(res.Items))
 			for _, item := range res.Items {
-				if maxNotes > 0 && processed >= maxNotes {
+				if maxNotes > 0 && out.Processed >= maxNotes {
 					break
 				}
-				noteId := item.Id
-				if noteId == "" {
-					noteId = item.NoteCard.NoteId
+				noteID := item.Id
+				if noteID == "" {
+					noteID = item.NoteCard.NoteId
 				}
-				if noteId == "" {
+				if noteID == "" {
 					continue
 				}
-				if _, ok := seen[noteId]; ok {
+				if _, ok := seen[noteID]; ok {
 					continue
 				}
-				seen[noteId] = struct{}{}
-				processed++
-
-				sem <- struct{}{}
-				wg.Add(1)
-				go func(noteId, xsecSource, xsecToken, nickname, title string) {
-					defer wg.Done()
-					defer func() { <-sem }()
-					logger.Info("note", "nickname", nickname, "title", title, "note_id", noteId)
-					c.processNote(noteId, xsecSource, xsecToken)
-				}(noteId, item.XsecSource, item.XsecToken, item.NoteCard.User.Nickname, item.NoteCard.Title)
+				seen[noteID] = struct{}{}
+				tasks = append(tasks, noteTask{
+					NoteID:     noteID,
+					XsecSource: item.XsecSource,
+					XsecToken:  item.XsecToken,
+					Nickname:   item.NoteCard.User.Nickname,
+					Title:      item.NoteCard.Title,
+				})
 			}
 
-			wg.Wait()
+			r := crawler.ForEachLimit(ctx, tasks, concurrency, func(ctx context.Context, t noteTask) error {
+				logger.Info("note", "nickname", t.Nickname, "title", t.Title, "note_id", t.NoteID)
+				return c.processNote(t.NoteID, t.XsecSource, t.XsecToken)
+			})
+			out.Succeeded += r.Succeeded
+			out.Failed += r.Failed
+			out.Processed += r.Processed
 
-			if maxNotes > 0 && processed >= maxNotes {
+			if maxNotes > 0 && out.Processed >= maxNotes {
 				break
 			}
 			if !res.HasMore {
@@ -212,35 +253,82 @@ func (c *XhsCrawler) runSearchMode() error {
 			}
 
 			page++
-			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			if config.AppConfig.CrawlerMaxSleepSec > 0 {
+				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			}
 		}
 	}
-	return nil
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
 }
 
-func (c *XhsCrawler) runDetailMode() error {
-	urls := config.AppConfig.XhsSpecifiedNoteUrls
-	logger.Info("running detail mode", "urls", len(urls))
-	for _, url := range urls {
-		noteId := extractNoteId(url)
-		if noteId == "" {
-			logger.Warn("invalid url", "url", url)
-			continue
-		}
-		logger.Info("processing note", "note_id", noteId)
-		c.processNote(noteId, "", "")
-		time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+func (c *XhsCrawler) runDetailMode(ctx context.Context, req crawler.Request) (crawler.Result, error) {
+	inputs := req.Inputs
+	if len(inputs) == 0 {
+		inputs = config.AppConfig.XhsSpecifiedNoteUrls
 	}
-	return nil
+	logger.Info("running detail mode", "urls", len(inputs))
+	if len(inputs) == 0 {
+		return crawler.Result{}, fmt.Errorf("empty inputs (XHS_SPECIFIED_NOTE_URL_LIST)")
+	}
+	concurrency := req.Concurrency
+	if concurrency <= 0 {
+		concurrency = config.AppConfig.MaxConcurrencyNum
+	}
+	if concurrency < 1 {
+		concurrency = 1
+	}
+
+	out := crawler.NewResult(req)
+	r := crawler.ForEachLimit(ctx, inputs, concurrency, func(ctx context.Context, input string) error {
+		noteID := extractNoteId(input)
+		if noteID == "" {
+			logger.Warn("invalid url", "url", input)
+			return fmt.Errorf("invalid url: %s", input)
+		}
+		logger.Info("processing note", "note_id", noteID)
+		return c.processNote(noteID, "", "")
+	})
+	out.Processed = r.Processed
+	out.Succeeded = r.Succeeded
+	out.Failed = r.Failed
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
 }
 
-func (c *XhsCrawler) runCreatorMode() error {
-	creatorIds := config.AppConfig.XhsCreatorIdList
-	logger.Info("running creator mode", "creators", len(creatorIds))
-	for _, userId := range creatorIds {
-		creatorID := ExtractCreatorID(userId)
+func (c *XhsCrawler) runCreatorMode(ctx context.Context, req crawler.Request) (crawler.Result, error) {
+	inputs := req.Inputs
+	if len(inputs) == 0 {
+		inputs = config.AppConfig.XhsCreatorIdList
+	}
+	logger.Info("running creator mode", "creators", len(inputs))
+	if len(inputs) == 0 {
+		return crawler.Result{}, fmt.Errorf("empty inputs (XHS_CREATOR_ID_LIST)")
+	}
+
+	maxNotes := req.MaxNotes
+	if maxNotes == 0 {
+		maxNotes = config.AppConfig.CrawlerMaxNotesCount
+	}
+	concurrency := req.Concurrency
+	if concurrency <= 0 {
+		concurrency = config.AppConfig.MaxConcurrencyNum
+	}
+	if concurrency < 1 {
+		concurrency = 1
+	}
+
+	out := crawler.NewResult(req)
+	for _, userID := range inputs {
+		select {
+		case <-ctx.Done():
+			out.FinishedAt = time.Now().Unix()
+			return out, ctx.Err()
+		default:
+		}
+		creatorID := ExtractCreatorID(userID)
 		if creatorID == "" {
-			logger.Warn("invalid creator id/url", "value", userId)
+			logger.Warn("invalid creator id/url", "value", userID)
 			continue
 		}
 		logger.Info("processing creator", "creator_id", creatorID)
@@ -249,16 +337,16 @@ func (c *XhsCrawler) runCreatorMode() error {
 			logger.Error("fetch creator info failed", "creator_id", creatorID, "err", err)
 		}
 
-		maxNotes := config.AppConfig.CrawlerMaxNotesCount
-		concurrency := config.AppConfig.MaxConcurrencyNum
-		if concurrency < 1 {
-			concurrency = 1
-		}
 		processed := 0
 		seen := make(map[string]struct{})
-
 		cursor := ""
 		for {
+			select {
+			case <-ctx.Done():
+				out.FinishedAt = time.Now().Unix()
+				return out, ctx.Err()
+			default:
+			}
 			res, err := c.client.GetNotesByCreator(creatorID, cursor)
 			if err != nil {
 				logger.Error("get notes for creator failed", "creator_id", creatorID, "err", err)
@@ -266,9 +354,7 @@ func (c *XhsCrawler) runCreatorMode() error {
 			}
 
 			logger.Info("creator notes", "creator_id", creatorID, "notes", len(res.Notes))
-			sem := make(chan struct{}, concurrency)
-			var wg sync.WaitGroup
-
+			tasks := make([]Note, 0, len(res.Notes))
 			for _, note := range res.Notes {
 				if maxNotes > 0 && processed >= maxNotes {
 					break
@@ -281,17 +367,16 @@ func (c *XhsCrawler) runCreatorMode() error {
 				}
 				seen[note.NoteId] = struct{}{}
 				processed++
-
-				sem <- struct{}{}
-				wg.Add(1)
-				go func(note Note) {
-					defer wg.Done()
-					defer func() { <-sem }()
-					logger.Info("note", "nickname", note.User.Nickname, "title", note.Title, "note_id", note.NoteId)
-					c.processNote(note.NoteId, note.XsecSource, note.XsecToken)
-				}(note)
+				tasks = append(tasks, note)
 			}
-			wg.Wait()
+
+			r := crawler.ForEachLimit(ctx, tasks, concurrency, func(ctx context.Context, note Note) error {
+				logger.Info("note", "nickname", note.User.Nickname, "title", note.Title, "note_id", note.NoteId)
+				return c.processNote(note.NoteId, note.XsecSource, note.XsecToken)
+			})
+			out.Succeeded += r.Succeeded
+			out.Failed += r.Failed
+			out.Processed += r.Processed
 
 			if maxNotes > 0 && processed >= maxNotes {
 				break
@@ -300,10 +385,14 @@ func (c *XhsCrawler) runCreatorMode() error {
 				break
 			}
 			cursor = res.Cursor
-			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			if config.AppConfig.CrawlerMaxSleepSec > 0 {
+				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			}
 		}
 	}
-	return nil
+
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
 }
 
 func (c *XhsCrawler) fetchAndSaveCreator(userID string) error {
@@ -338,19 +427,19 @@ func (c *XhsCrawler) fetchAndSaveCreator(userID string) error {
 	return store.SaveCreator(userID, record)
 }
 
-func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
+func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) error {
 	logger.Info("fetching note detail", "note_id", noteId)
 	noteDetail, err := c.client.GetNoteById(noteId, xsecSource, xsecToken)
 	if err != nil {
 		logger.Error("get note detail failed", "note_id", noteId, "err", err)
-		return
+		return err
 	}
 
 	if err := store.SaveNoteDetail(noteId, &noteDetail); err != nil {
 		logger.Error("save note failed", "note_id", noteId, "err", err)
-	} else {
-		logger.Info("note saved", "note_id", noteId)
+		return err
 	}
+	logger.Info("note saved", "note_id", noteId)
 
 	// Download Medias
 	if config.AppConfig.EnableGetMedias {
@@ -440,6 +529,7 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) {
 			}
 		}
 	}
+	return nil
 }
 
 func (c *XhsCrawler) fetchAllComments(noteId, xsecToken string) ([]Comment, error) {

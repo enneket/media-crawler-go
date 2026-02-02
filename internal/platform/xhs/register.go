@@ -6,5 +6,5 @@ import (
 )
 
 func init() {
-	platform.Register("xhs", nil, func() crawler.Crawler { return NewCrawler() })
+	platform.Register("xhs", nil, func() crawler.Runner { return NewCrawler() })
 }

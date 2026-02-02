@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/store"
-	"strings"
+	"time"
 )
 
 type Crawler struct {
@@ -18,45 +19,63 @@ func NewCrawler() *Crawler {
 	return &Crawler{client: NewClient()}
 }
 
-func (c *Crawler) Start(ctx context.Context) error {
+func (c *Crawler) Run(ctx context.Context, req crawler.Request) (crawler.Result, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	switch strings.ToLower(strings.TrimSpace(config.AppConfig.CrawlerType)) {
-	case "", "detail":
-		return c.runDetail(ctx)
-	default:
-		return fmt.Errorf("bilibili only supports CRAWLER_TYPE=detail for now")
+	req.Platform = "bilibili"
+	if req.Mode == "" {
+		req.Mode = crawler.ModeDetail
 	}
+	out := crawler.NewResult(req)
+	res, err := c.runDetail(ctx, req)
+	res.StartedAt = out.StartedAt
+	return res, err
 }
 
-func (c *Crawler) runDetail(ctx context.Context) error {
-	inputs := config.AppConfig.BiliSpecifiedVideoUrls
+func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.Result, error) {
+	if req.Mode != crawler.ModeDetail {
+		return crawler.Result{}, fmt.Errorf("bilibili only supports mode=detail for now")
+	}
+	inputs := req.Inputs
 	if len(inputs) == 0 {
-		return fmt.Errorf("empty BILI_SPECIFIED_VIDEO_URL_LIST")
+		inputs = config.AppConfig.BiliSpecifiedVideoUrls
+	}
+	if len(inputs) == 0 {
+		return crawler.Result{}, fmt.Errorf("empty inputs (BILI_SPECIFIED_VIDEO_URL_LIST)")
 	}
 	logger.Info("bilibili detail start", "inputs", len(inputs))
-	for _, input := range inputs {
+	limit := req.Concurrency
+	if limit <= 0 {
+		limit = 1
+	}
+	itemRes := crawler.ForEachLimit(ctx, inputs, limit, func(ctx context.Context, input string) error {
 		bvid, aid, noteID, err := ParseVideoID(input)
 		if err != nil {
 			logger.Warn("skip invalid bilibili input", "value", input, "err", err)
-			continue
+			return err
 		}
 		res, err := c.client.GetView(ctx, bvid, aid)
 		if err != nil {
 			logger.Error("fetch view failed", "note_id", noteID, "err", err)
-			continue
+			return err
 		}
 		var data any
 		if err := json.Unmarshal(res.Data, &data); err != nil {
 			logger.Error("decode view data failed", "note_id", noteID, "err", err)
-			continue
+			return err
 		}
 		if err := store.SaveNoteDetail(noteID, data); err != nil {
 			logger.Error("save note failed", "note_id", noteID, "err", err)
-			continue
+			return err
 		}
 		logger.Info("note saved", "note_id", noteID)
-	}
-	return nil
+		return nil
+	})
+	out := crawler.NewResult(req)
+	out.Processed = itemRes.Processed
+	out.Succeeded = itemRes.Succeeded
+	out.Failed = itemRes.Failed
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
 }

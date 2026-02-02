@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"media-crawler-go/internal/browser"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/downloader"
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/proxy"
@@ -13,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/playwright-community/playwright-go"
@@ -35,7 +35,7 @@ func NewCrawler() *DouyinCrawler {
 	return &DouyinCrawler{}
 }
 
-func (c *DouyinCrawler) Start(ctx context.Context) error {
+func (c *DouyinCrawler) Run(ctx context.Context, req crawler.Request) (crawler.Result, error) {
 	logger.Info("douyin crawler started")
 
 	if config.AppConfig.EnableIPProxy {
@@ -48,13 +48,13 @@ func (c *DouyinCrawler) Start(ctx context.Context) error {
 	}
 
 	if err := c.initBrowser(ctx); err != nil {
-		return err
+		return crawler.Result{}, err
 	}
 	defer c.close()
 
 	signer, err := NewSigner()
 	if err != nil {
-		return err
+		return crawler.Result{}, err
 	}
 	c.signer = signer
 
@@ -65,23 +65,35 @@ func (c *DouyinCrawler) Start(ctx context.Context) error {
 	}
 
 	if config.AppConfig.Headless && config.AppConfig.Cookies == "" {
-		return fmt.Errorf("HEADLESS=true requires COOKIES set for douyin")
+		return crawler.Result{}, fmt.Errorf("HEADLESS=true requires COOKIES set for douyin")
 	}
 
 	if err := c.login(ctx); err != nil {
-		return err
+		return crawler.Result{}, err
 	}
 
-	switch config.AppConfig.CrawlerType {
-	case "detail":
-		return c.runDetailMode(ctx)
-	case "creator":
-		return c.runCreatorMode(ctx)
-	case "search":
-		return c.runSearchMode(ctx)
-	default:
-		return fmt.Errorf("douyin crawler type not implemented: %s (supported: search/detail/creator)", config.AppConfig.CrawlerType)
+	req.Platform = "douyin"
+	if req.Mode == "" {
+		req.Mode = crawler.NormalizeMode(config.AppConfig.CrawlerType)
 	}
+	out := crawler.NewResult(req)
+
+	msToken := c.getMsToken()
+
+	var res crawler.Result
+	var runErr error
+	switch req.Mode {
+	case crawler.ModeDetail:
+		res, runErr = c.runDetailMode(ctx, req, msToken)
+	case crawler.ModeCreator:
+		res, runErr = c.runCreatorMode(ctx, req, msToken)
+	case crawler.ModeSearch:
+		res, runErr = c.runSearchMode(ctx, req, msToken)
+	default:
+		return crawler.Result{}, fmt.Errorf("douyin mode not implemented: %s (supported: search/detail/creator)", req.Mode)
+	}
+	res.StartedAt = out.StartedAt
+	return res, runErr
 }
 
 func (c *DouyinCrawler) initBrowser(ctx context.Context) error {
@@ -247,19 +259,26 @@ func buildCookiesForDouyin(cookieStr string) []playwright.OptionalCookie {
 	return out
 }
 
-func (c *DouyinCrawler) runDetailMode(ctx context.Context) error {
-	inputs := config.AppConfig.DouyinSpecifiedNoteUrls
+func (c *DouyinCrawler) getMsToken() string {
+	if c.page == nil {
+		return ""
+	}
+	v, err := c.page.Evaluate("() => window.localStorage && window.localStorage.getItem('xmst')")
+	if err != nil {
+		return ""
+	}
+	s, _ := v.(string)
+	return s
+}
+
+func (c *DouyinCrawler) runDetailMode(ctx context.Context, req crawler.Request, msToken string) (crawler.Result, error) {
+	inputs := req.Inputs
+	if len(inputs) == 0 {
+		inputs = config.AppConfig.DouyinSpecifiedNoteUrls
+	}
 	logger.Info("running detail mode", "inputs", len(inputs))
 	if len(inputs) == 0 {
-		return fmt.Errorf("DY_SPECIFIED_NOTE_URL_LIST is empty")
-	}
-
-	msToken := ""
-	v, err := c.page.Evaluate("() => window.localStorage && window.localStorage.getItem('xmst')")
-	if err == nil {
-		if s, ok := v.(string); ok {
-			msToken = s
-		}
+		return crawler.Result{}, fmt.Errorf("empty inputs (DY_SPECIFIED_NOTE_URL_LIST)")
 	}
 
 	var ids []string
@@ -271,24 +290,31 @@ func (c *DouyinCrawler) runDetailMode(ctx context.Context) error {
 		}
 		ids = append(ids, awemeID)
 	}
-	c.processAwemeIDs(ctx, ids, msToken)
-	return nil
+
+	out := crawler.NewResult(req)
+	r := c.processAwemeIDs(ctx, ids, msToken, req.Concurrency)
+	out.Processed = r.Processed
+	out.Succeeded = r.Succeeded
+	out.Failed = r.Failed
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
 }
 
-func (c *DouyinCrawler) runCreatorMode(ctx context.Context) error {
-	inputs := config.AppConfig.DouyinCreatorIdList
+func (c *DouyinCrawler) runCreatorMode(ctx context.Context, req crawler.Request, msToken string) (crawler.Result, error) {
+	inputs := req.Inputs
+	if len(inputs) == 0 {
+		inputs = config.AppConfig.DouyinCreatorIdList
+	}
 	logger.Info("running creator mode", "inputs", len(inputs))
 	if len(inputs) == 0 {
-		return fmt.Errorf("DY_CREATOR_ID_LIST is empty")
+		return crawler.Result{}, fmt.Errorf("empty inputs (DY_CREATOR_ID_LIST)")
 	}
 
-	msToken := ""
-	v, err := c.page.Evaluate("() => window.localStorage && window.localStorage.getItem('xmst')")
-	if err == nil {
-		if s, ok := v.(string); ok {
-			msToken = s
-		}
+	limit := req.MaxNotes
+	if limit == 0 {
+		limit = config.AppConfig.CrawlerMaxNotesCount
 	}
+	out := crawler.NewResult(req)
 
 	for _, input := range inputs {
 		secUserID := ExtractSecUserID(input)
@@ -307,11 +333,10 @@ func (c *DouyinCrawler) runCreatorMode(ctx context.Context) error {
 		maxCursor := ""
 		hasMore := 1
 		processed := 0
-		limit := config.AppConfig.CrawlerMaxNotesCount
 		for hasMore == 1 && (limit <= 0 || processed < limit) {
 			resp, err := c.client.GetUserAwemePosts(ctx, secUserID, maxCursor, msToken)
 			if err != nil {
-				return err
+				return crawler.Result{}, err
 			}
 			hasMore = resp.HasMore
 			maxCursor = resp.MaxCursor
@@ -328,31 +353,38 @@ func (c *DouyinCrawler) runCreatorMode(ctx context.Context) error {
 					break
 				}
 			}
-			c.processAwemeIDs(ctx, ids, msToken)
-			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			r := c.processAwemeIDs(ctx, ids, msToken, req.Concurrency)
+			out.Succeeded += r.Succeeded
+			out.Failed += r.Failed
+			out.Processed += r.Processed
+			if config.AppConfig.CrawlerMaxSleepSec > 0 {
+				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			}
 		}
 	}
-	return nil
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
 }
 
-func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
-	keywords := config.GetKeywords()
+func (c *DouyinCrawler) runSearchMode(ctx context.Context, req crawler.Request, msToken string) (crawler.Result, error) {
+	keywords := req.Keywords
+	if len(keywords) == 0 {
+		keywords = config.GetKeywords()
+	}
 	logger.Info("running search mode", "keywords", len(keywords))
 	if len(keywords) == 0 {
-		return fmt.Errorf("KEYWORDS is empty")
-	}
-
-	msToken := ""
-	v, err := c.page.Evaluate("() => window.localStorage && window.localStorage.getItem('xmst')")
-	if err == nil {
-		if s, ok := v.(string); ok {
-			msToken = s
-		}
+		return crawler.Result{}, fmt.Errorf("empty keywords")
 	}
 
 	limitCount := 10
-	maxNotes := config.AppConfig.CrawlerMaxNotesCount
-	startPage := config.AppConfig.StartPage
+	maxNotes := req.MaxNotes
+	if maxNotes == 0 {
+		maxNotes = config.AppConfig.CrawlerMaxNotesCount
+	}
+	startPage := req.StartPage
+	if startPage <= 0 {
+		startPage = config.AppConfig.StartPage
+	}
 	if startPage <= 0 {
 		startPage = 1
 	}
@@ -360,6 +392,7 @@ func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
 		limitCount = maxNotes
 	}
 
+	out := crawler.NewResult(req)
 	for _, keyword := range keywords {
 		page := 0
 		searchID := ""
@@ -371,7 +404,7 @@ func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
 			offset := page*limitCount - limitCount
 			resp, err := c.client.SearchInfoByKeyword(ctx, keyword, offset, limitCount, searchID, msToken)
 			if err != nil {
-				return err
+				return crawler.Result{}, err
 			}
 			if len(resp.Data) == 0 {
 				break
@@ -390,12 +423,18 @@ func (c *DouyinCrawler) runSearchMode(ctx context.Context) error {
 				}
 				ids = append(ids, id)
 			}
-			c.processAwemeIDs(ctx, ids, msToken)
+			r := c.processAwemeIDs(ctx, ids, msToken, req.Concurrency)
+			out.Succeeded += r.Succeeded
+			out.Failed += r.Failed
+			out.Processed += r.Processed
 			page++
-			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			if config.AppConfig.CrawlerMaxSleepSec > 0 {
+				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			}
 		}
 	}
-	return nil
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
 }
 
 func resolveAwemeID(input string) string {
@@ -525,9 +564,9 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 	return nil
 }
 
-func (c *DouyinCrawler) processAwemeIDs(ctx context.Context, ids []string, msToken string) {
+func (c *DouyinCrawler) processAwemeIDs(ctx context.Context, ids []string, msToken string, concurrency int) crawler.ItemResult {
 	if len(ids) == 0 {
-		return
+		return crawler.ItemResult{}
 	}
 	seen := make(map[string]struct{}, len(ids))
 	uniq := make([]string, 0, len(ids))
@@ -542,43 +581,18 @@ func (c *DouyinCrawler) processAwemeIDs(ctx context.Context, ids []string, msTok
 		uniq = append(uniq, id)
 	}
 
-	n := config.AppConfig.MaxConcurrencyNum
-	if n <= 1 {
-		for _, id := range uniq {
-			if err := c.processOneAweme(ctx, id, msToken); err != nil {
-				logger.Error("process failed", "id", id, "err", err)
-			}
+	n := concurrency
+	if n <= 0 {
+		n = config.AppConfig.MaxConcurrencyNum
+	}
+	if n < 1 {
+		n = 1
+	}
+	return crawler.ForEachLimit(ctx, uniq, n, func(ctx context.Context, id string) error {
+		if err := c.processOneAweme(ctx, id, msToken); err != nil {
+			logger.Error("process failed", "id", id, "err", err)
+			return err
 		}
-		return
-	}
-
-	jobs := make(chan string)
-	var wg sync.WaitGroup
-	wg.Add(n)
-	for i := 0; i < n; i++ {
-		go func() {
-			defer wg.Done()
-			for id := range jobs {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-				if err := c.processOneAweme(ctx, id, msToken); err != nil {
-					logger.Error("process failed", "id", id, "err", err)
-				}
-			}
-		}()
-	}
-	for _, id := range uniq {
-		select {
-		case <-ctx.Done():
-			close(jobs)
-			wg.Wait()
-			return
-		case jobs <- id:
-		}
-	}
-	close(jobs)
-	wg.Wait()
+		return nil
+	})
 }

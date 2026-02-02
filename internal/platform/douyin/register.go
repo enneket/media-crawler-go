@@ -6,5 +6,5 @@ import (
 )
 
 func init() {
-	platform.Register("douyin", []string{"dy"}, func() crawler.Crawler { return NewCrawler() })
+	platform.Register("douyin", []string{"dy"}, func() crawler.Runner { return NewCrawler() })
 }

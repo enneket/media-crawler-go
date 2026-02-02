@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -20,10 +21,10 @@ import (
 func TestServerRunStopStatus(t *testing.T) {
 	config.AppConfig = config.Config{}
 	done := make(chan struct{})
-	runFn := func(ctx context.Context) error {
+	runFn := func(ctx context.Context) (crawler.Result, error) {
 		close(done)
 		<-ctx.Done()
-		return nil
+		return crawler.Result{}, nil
 	}
 
 	mgr := NewTaskManagerWithRunner(runFn)
@@ -67,7 +68,7 @@ func TestServerRunStopStatus(t *testing.T) {
 
 func TestServerRunValidation(t *testing.T) {
 	config.AppConfig = config.Config{}
-	runFn := func(ctx context.Context) error { return nil }
+	runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
 	srv := NewServer(NewTaskManagerWithRunner(runFn))
 
 	{
@@ -119,10 +120,10 @@ func TestServerRunValidation(t *testing.T) {
 func TestTaskManagerRunConflict(t *testing.T) {
 	var started sync.Once
 	block := make(chan struct{})
-	runFn := func(ctx context.Context) error {
+	runFn := func(ctx context.Context) (crawler.Result, error) {
 		started.Do(func() {})
 		<-block
-		return nil
+		return crawler.Result{}, nil
 	}
 
 	m := NewTaskManagerWithRunner(runFn)

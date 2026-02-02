@@ -6,5 +6,5 @@ import (
 )
 
 func init() {
-	platform.Register("weibo", []string{"wb", "微博"}, func() crawler.Crawler { return NewCrawler() })
+	platform.Register("weibo", []string{"wb", "微博"}, func() crawler.Runner { return NewCrawler() })
 }

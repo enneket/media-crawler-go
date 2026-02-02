@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/platform"
 	"strings"
 	"sync"
@@ -17,6 +18,9 @@ type Status struct {
 	Crawler    string `json:"crawler_type,omitempty"`
 	StartedAt  int64  `json:"started_at,omitempty"`
 	FinishedAt int64  `json:"finished_at,omitempty"`
+	Processed  int    `json:"processed,omitempty"`
+	Succeeded  int    `json:"succeeded,omitempty"`
+	Failed     int    `json:"failed,omitempty"`
 	LastError  string `json:"last_error,omitempty"`
 }
 
@@ -43,7 +47,7 @@ type TaskManager struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc
 	status Status
-	runFn  func(context.Context) error
+	runFn  func(context.Context) (crawler.Result, error)
 }
 
 var ErrTaskRunning = errors.New("task is running")
@@ -60,7 +64,7 @@ func NewTaskManager() *TaskManager {
 	return NewTaskManagerWithRunner(runCrawler)
 }
 
-func NewTaskManagerWithRunner(runFn func(context.Context) error) *TaskManager {
+func NewTaskManagerWithRunner(runFn func(context.Context) (crawler.Result, error)) *TaskManager {
 	if runFn == nil {
 		runFn = runCrawler
 	}
@@ -99,12 +103,15 @@ func (m *TaskManager) Run(req RunRequest) error {
 	m.mu.Unlock()
 
 	go func() {
-		err := m.runFn(ctx)
+		res, err := m.runFn(ctx)
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		m.cancel = nil
 		m.status.State = "idle"
 		m.status.FinishedAt = time.Now().Unix()
+		m.status.Processed = res.Processed
+		m.status.Succeeded = res.Succeeded
+		m.status.Failed = res.Failed
 		if err != nil {
 			m.status.LastError = err.Error()
 		} else {
@@ -125,12 +132,13 @@ func (m *TaskManager) Stop() bool {
 	return true
 }
 
-func runCrawler(ctx context.Context) error {
-	c, err := platform.New(config.AppConfig.Platform)
+func runCrawler(ctx context.Context) (crawler.Result, error) {
+	r, err := platform.New(config.AppConfig.Platform)
 	if err != nil {
-		return err
+		return crawler.Result{}, err
 	}
-	return c.Start(ctx)
+	req := crawler.RequestFromConfig(config.AppConfig)
+	return r.Run(ctx, req)
 }
 
 func applyRunRequestToConfig(cfg *config.Config, req RunRequest) {

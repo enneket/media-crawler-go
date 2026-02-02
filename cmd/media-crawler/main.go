@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"media-crawler-go/internal/api"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/platform"
 	_ "media-crawler-go/internal/platform/bilibili"
@@ -40,17 +41,18 @@ func main() {
 
 	logger.Info("starting crawler", "platform", config.AppConfig.Platform)
 
-	c, err := platform.New(config.AppConfig.Platform)
+	r, err := platform.New(config.AppConfig.Platform)
 	if err != nil {
 		logger.Error("crawler init failed", "err", err)
 		os.Exit(1)
 	}
-	err = c.Start(context.Background())
+	req := crawler.RequestFromConfig(config.AppConfig)
+	res, err := r.Run(context.Background(), req)
 
 	if err != nil {
-		logger.Error("crawler failed", "err", err)
+		logger.Error("crawler failed", "err", err, "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed)
 		os.Exit(1)
 	}
 
-	logger.Info("crawler finished successfully")
+	logger.Info("crawler finished successfully", "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed)
 }
