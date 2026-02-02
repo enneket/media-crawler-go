@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"media-crawler-go/internal/api"
@@ -53,7 +54,13 @@ func main() {
 	res, err := r.Run(context.Background(), req)
 
 	if err != nil {
-		logger.Error("crawler failed", "err", err, "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed, "failure_kinds", res.FailureKinds)
+		errorKind := crawler.KindOf(err)
+		riskHint := ""
+		var ce crawler.Error
+		if errors.As(err, &ce) && ce.Kind == crawler.ErrorKindRiskHint {
+			riskHint = ce.Hint
+		}
+		logger.Error("crawler failed", "err", err, "error_kind", errorKind, "risk_hint", riskHint, "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed, "failure_kinds", res.FailureKinds)
 		os.Exit(1)
 	}
 

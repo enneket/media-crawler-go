@@ -285,7 +285,7 @@ func (c *XhsCrawler) runDetailMode(ctx context.Context, req crawler.Request) (cr
 		noteID := extractNoteId(input)
 		if noteID == "" {
 			logger.Warn("invalid url", "url", input)
-			return fmt.Errorf("invalid url: %s", input)
+			return crawler.Error{Kind: crawler.ErrorKindInvalidInput, Platform: req.Platform, URL: input, Msg: "invalid xhs url"}
 		}
 		logger.Info("processing note", "note_id", noteID)
 		return c.processNote(noteID, "", "")

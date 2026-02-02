@@ -53,7 +53,7 @@ func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.R
 		id, noteID, err := ParseStatusID(input)
 		if err != nil {
 			logger.Warn("skip invalid weibo input", "value", input, "err", err)
-			return err
+			return crawler.Error{Kind: crawler.ErrorKindInvalidInput, Platform: req.Platform, Msg: "invalid weibo input", Err: err}
 		}
 		res, err := c.client.Show(ctx, id)
 		if err != nil {

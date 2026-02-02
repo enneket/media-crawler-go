@@ -23,6 +23,7 @@ type Error struct {
 	Kind     ErrorKind
 	Platform string
 	URL      string
+	Hint     string
 	Msg      string
 	Err      error
 }
@@ -89,6 +90,7 @@ func NewRiskHintError(platform, url, hint string) error {
 		Kind:     ErrorKindRiskHint,
 		Platform: platform,
 		URL:      url,
+		Hint:     hint,
 		Msg:      fmt.Sprintf("risk hint detected: %s", hint),
 	}
 }

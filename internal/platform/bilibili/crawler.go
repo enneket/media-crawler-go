@@ -53,7 +53,7 @@ func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.R
 		bvid, aid, noteID, err := ParseVideoID(input)
 		if err != nil {
 			logger.Warn("skip invalid bilibili input", "value", input, "err", err)
-			return err
+			return crawler.Error{Kind: crawler.ErrorKindInvalidInput, Platform: req.Platform, Msg: "invalid bilibili input", Err: err}
 		}
 		res, err := c.client.GetView(ctx, bvid, aid)
 		if err != nil {
