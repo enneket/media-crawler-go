@@ -41,6 +41,7 @@ Notes:
 
 - Notes: `data/<platform>/notes/<note_id>/note.(json|csv)`
 - Comments: `data/<platform>/notes/<note_id>/comments.(jsonl|csv|xlsx)` (deduped via `comments.idx`, xlsx currently for xhs/douyin)
+- Global Comments: `data/<platform>/comments.(jsonl|csv|xlsx)` (unified schema, deduped via `comments.global.idx`, currently for xhs/douyin)
 - Media: `data/<platform>/notes/<note_id>/media/*`
 
 ## API Mode (Web UI)

@@ -570,8 +570,22 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 		} else {
 			if config.AppConfig.SaveDataOption == "csv" {
 				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
 				for i := range comments {
+					comments[i].NoteID = awemeID
 					items = append(items, &comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "douyin",
+						NoteID:          awemeID,
+						CommentID:       comments[i].CID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Text,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].DiggCount,
+						UserID:          comments[i].User.UID,
+						UserSecUID:      comments[i].User.SecUID,
+						UserNickname:    comments[i].User.Nickname,
+					})
 				}
 				_, err := store.AppendUniqueCommentsCSV(
 					awemeID,
@@ -583,10 +597,33 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 				if err != nil {
 					logger.Error("save comments csv failed", "aweme_id", awemeID, "err", err)
 				}
+				_, err = store.AppendUniqueGlobalCommentsCSV(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+					(&store.UnifiedComment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+				)
+				if err != nil {
+					logger.Error("save global comments csv failed", "aweme_id", awemeID, "err", err)
+				}
 			} else if config.AppConfig.SaveDataOption == "xlsx" {
 				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
 				for i := range comments {
+					comments[i].NoteID = awemeID
 					items = append(items, &comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "douyin",
+						NoteID:          awemeID,
+						CommentID:       comments[i].CID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Text,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].DiggCount,
+						UserID:          comments[i].User.UID,
+						UserSecUID:      comments[i].User.SecUID,
+						UserNickname:    comments[i].User.Nickname,
+					})
 				}
 				_, err := store.AppendUniqueCommentsXLSX(
 					awemeID,
@@ -598,10 +635,32 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 				if err != nil {
 					logger.Error("save comments xlsx failed", "aweme_id", awemeID, "err", err)
 				}
+				_, err = store.AppendUniqueGlobalCommentsXLSX(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+					(&store.UnifiedComment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+				)
+				if err != nil {
+					logger.Error("save global comments xlsx failed", "aweme_id", awemeID, "err", err)
+				}
 			} else {
 				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
 				for i := range comments {
 					items = append(items, comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "douyin",
+						NoteID:          awemeID,
+						CommentID:       comments[i].CID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Text,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].DiggCount,
+						UserID:          comments[i].User.UID,
+						UserSecUID:      comments[i].User.SecUID,
+						UserNickname:    comments[i].User.Nickname,
+					})
 				}
 				_, err := store.AppendUniqueCommentsJSONL(
 					awemeID,
@@ -610,6 +669,13 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 				)
 				if err != nil {
 					logger.Error("save comments failed", "aweme_id", awemeID, "err", err)
+				}
+				_, err = store.AppendUniqueGlobalCommentsJSONL(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+				)
+				if err != nil {
+					logger.Error("save global comments failed", "aweme_id", awemeID, "err", err)
 				}
 			}
 		}
