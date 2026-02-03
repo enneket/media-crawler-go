@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>media-crawler-go</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="title">media-crawler-go</div>
+      <div class="links">
+        <a href="/healthz" target="_blank" rel="noreferrer">healthz</a>
+        <a href="/status" target="_blank" rel="noreferrer">status</a>
+        <a href="/data/files" target="_blank" rel="noreferrer">data</a>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <h2>任务</h2>
+        <div class="row">
+          <label>
+            平台
+            <select id="platform"></select>
+          </label>
+          <label>
+            模式
+            <select id="crawlerType">
+              <option value="search">search</option>
+              <option value="detail">detail</option>
+              <option value="creator">creator</option>
+            </select>
+          </label>
+        </div>
+        <label class="block">
+          关键词（search）
+          <input id="keywords" placeholder="golang,programming" />
+        </label>
+        <label class="block">
+          URL 列表（detail/creator，按行分隔）
+          <textarea id="urls" rows="4" placeholder="https://..."></textarea>
+        </label>
+        <label class="block">
+          Creator 列表（creator，按行分隔）
+          <textarea id="creators" rows="3" placeholder="creator id / profile url"></textarea>
+        </label>
+        <div class="row">
+          <button id="btnRun" class="primary">Run</button>
+          <button id="btnStop">Stop</button>
+          <button id="btnLoadData">刷新数据文件</button>
+        </div>
+        <pre id="runPayload" class="code"></pre>
+      </section>
+
+      <section class="card">
+        <h2>状态（WS）</h2>
+        <pre id="status" class="code"></pre>
+      </section>
+
+      <section class="card">
+        <h2>日志（WS）</h2>
+        <div class="row">
+          <button id="btnClearLogs">清空</button>
+          <label class="inline">
+            <input id="autoScroll" type="checkbox" checked />
+            自动滚动
+          </label>
+        </div>
+        <pre id="logs" class="code logs"></pre>
+      </section>
+
+      <section class="card">
+        <h2>数据文件</h2>
+        <div class="split">
+          <div>
+            <ul id="files" class="files"></ul>
+          </div>
+          <div>
+            <div class="row">
+              <button id="btnPreview">预览</button>
+              <a id="btnDownload" href="#" target="_blank" rel="noreferrer">下载</a>
+            </div>
+            <pre id="preview" class="code"></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>
