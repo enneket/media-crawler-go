@@ -11,7 +11,7 @@ func AppendUniqueCommentsJSONL(noteID string, items []any, keyFn func(any) (stri
 	if err != nil {
 		return n, err
 	}
-	if err := sqliteInsertComments(noteID, items, keyFn); err != nil {
+	if err := sqlInsertComments(noteID, items, keyFn); err != nil {
 		return n, err
 	}
 	return n, nil
@@ -26,7 +26,7 @@ func AppendUniqueCommentsCSV(noteID string, items []any, keyFn func(any) (string
 	if err != nil {
 		return n, err
 	}
-	if err := sqliteInsertComments(noteID, items, keyFn); err != nil {
+	if err := sqlInsertComments(noteID, items, keyFn); err != nil {
 		return n, err
 	}
 	return n, nil

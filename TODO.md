@@ -51,7 +51,8 @@
 - [x] 词云等增值能力：评论词云（读取 comments 数据生成图片）。
 - [x] 测试体系：按平台/模式的可回放测试（mock HTTP + 签名模块单测）。
 - [x] 存储后端扩展：Excel（XLSX）。
-- [ ] 存储后端扩展：MySQL/Postgres、MongoDB（按需）。
+- [x] 存储后端扩展：MySQL/Postgres。
+- [ ] 存储后端扩展：MongoDB（按需）。
 - [x] Cache 抽象：memory/redis（用于跨流程去重、签名/代理缓存等按需场景）。
 
 ## 与 Python 版差异（待补齐）
@@ -86,3 +87,4 @@
 - [x] T-011c tieba：search/creator（/f/search/res 抓列表 + /home/main 抓用户帖子列表 + 归档详情页）。
 - [x] T-012 存储扩展：Excel（可选）与输出目录配置。
 - [x] T-013 测试体系：可回放的 HTTP fixture（签名/接口解析稳定性）。
+- [x] T-014 存储扩展：MySQL/Postgres（SQL schema + upsert + comments 去重写入）。

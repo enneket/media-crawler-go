@@ -11,7 +11,7 @@ func CreatorDir(secUserID string) string {
 }
 
 func SaveCreatorProfile(secUserID string, profile any) error {
-	if err := sqliteUpsertCreator(secUserID, profile); err != nil {
+	if err := sqlUpsertCreator(secUserID, profile); err != nil {
 		return err
 	}
 	dir := CreatorDir(secUserID)

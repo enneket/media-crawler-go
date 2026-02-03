@@ -252,7 +252,7 @@ func validateRunConfig(cfg config.Config) error {
 		crawlerType = "search"
 	}
 
-	if v := strings.ToLower(strings.TrimSpace(cfg.StoreBackend)); v != "" && v != "file" && v != "sqlite" {
+	if v := strings.ToLower(strings.TrimSpace(cfg.StoreBackend)); v != "" && v != "file" && v != "sqlite" && v != "mysql" && v != "postgres" {
 		return ValidationError{Msg: fmt.Sprintf("invalid store_backend: %s", cfg.StoreBackend)}
 	}
 	if v := strings.ToLower(strings.TrimSpace(cfg.SaveDataOption)); v != "" && v != "json" && v != "csv" && v != "xlsx" {

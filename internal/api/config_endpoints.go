@@ -31,7 +31,7 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"crawler_types":    []string{"search", "detail", "creator"},
 		"login_types":      []string{"qrcode", "phone", "cookie"},
-		"store_backends":   []string{"file", "sqlite"},
+		"store_backends":   []string{"file", "sqlite", "mysql", "postgres"},
 		"save_data_option": []string{"json", "csv", "xlsx"},
 		"cache_backends":   []string{"memory", "redis", "none"},
 		"bili_search_mode": []string{"video"},
@@ -43,6 +43,8 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 			"login_type":        config.AppConfig.LoginType,
 			"store_backend":     config.AppConfig.StoreBackend,
 			"sqlite_path":       config.AppConfig.SQLitePath,
+			"mysql_dsn":         "",
+			"postgres_dsn":      "",
 			"cache_backend":     config.AppConfig.CacheBackend,
 			"cache_ttl_sec":     config.AppConfig.CacheDefaultTTLSec,
 			"redis_addr":        config.AppConfig.RedisAddr,

@@ -41,7 +41,7 @@ func SaveNoteDetail(noteID string, note interface{}) error {
 	if strings.TrimSpace(noteID) == "" {
 		return errors.New("note_id is empty")
 	}
-	if err := sqliteUpsertNote(noteID, note); err != nil {
+	if err := sqlUpsertNote(noteID, note); err != nil {
 		return err
 	}
 	dir := NoteDir(noteID)

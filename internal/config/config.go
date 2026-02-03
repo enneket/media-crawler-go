@@ -17,6 +17,8 @@ type Config struct {
 	DataDir              string `mapstructure:"DATA_DIR"`
 	StoreBackend         string `mapstructure:"STORE_BACKEND"`
 	SQLitePath           string `mapstructure:"SQLITE_PATH"`
+	MySQLDSN             string `mapstructure:"MYSQL_DSN"`
+	PostgresDSN          string `mapstructure:"POSTGRES_DSN"`
 	CacheBackend         string `mapstructure:"CACHE_BACKEND"`
 	CacheDefaultTTLSec   int    `mapstructure:"CACHE_DEFAULT_TTL_SEC"`
 	RedisAddr            string `mapstructure:"REDIS_ADDR"`
@@ -100,6 +102,8 @@ func LoadConfig(path string) error {
 	viper.SetDefault("DATA_DIR", "data")
 	viper.SetDefault("STORE_BACKEND", "file")
 	viper.SetDefault("SQLITE_PATH", "data/media_crawler.db")
+	viper.SetDefault("MYSQL_DSN", "")
+	viper.SetDefault("POSTGRES_DSN", "")
 	viper.SetDefault("CACHE_BACKEND", "memory")
 	viper.SetDefault("CACHE_DEFAULT_TTL_SEC", 600)
 	viper.SetDefault("REDIS_ADDR", "")

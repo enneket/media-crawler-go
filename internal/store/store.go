@@ -141,7 +141,7 @@ func SaveComments(comments interface{}) error {
 }
 
 func SaveCreator(userID string, creator interface{}) error {
-	if err := sqliteUpsertCreator(userID, creator); err != nil {
+	if err := sqlUpsertCreator(userID, creator); err != nil {
 		return err
 	}
 	s := GetStore()
