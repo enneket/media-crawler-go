@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"net/http"
 	"strings"
 	"time"
@@ -83,7 +84,7 @@ func (c *Client) Show(ctx context.Context, id string) (ShowResponse, error) {
 		return ShowResponse{}, err
 	}
 	if resp.StatusCode() != http.StatusOK {
-		return ShowResponse{}, fmt.Errorf("bad status: %s", resp.Status())
+		return ShowResponse{}, crawler.NewHTTPStatusError("weibo", fmt.Sprintf("/statuses/show?id=%s", id), resp.StatusCode(), resp.String())
 	}
 	if out.Ok != 1 {
 		return ShowResponse{}, fmt.Errorf("weibo api not ok: ok=%d", out.Ok)

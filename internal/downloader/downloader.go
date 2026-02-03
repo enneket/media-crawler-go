@@ -3,6 +3,7 @@ package downloader
 import (
 	"fmt"
 	"io"
+	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/logger"
 	"net/http"
 	"os"
@@ -73,7 +74,7 @@ func (d *Downloader) download(url, filename string, headers map[string]string) e
 		func() {
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
-				lastErr = fmt.Errorf("bad status: %s", resp.Status)
+				lastErr = crawler.NewHTTPStatusError("downloader", url, resp.StatusCode, "")
 				return
 			}
 

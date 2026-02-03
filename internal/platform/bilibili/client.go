@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"net/http"
 	"time"
 
@@ -80,7 +81,7 @@ func (c *Client) GetView(ctx context.Context, bvid string, aid int64) (ViewRespo
 		return ViewResponse{}, err
 	}
 	if resp.StatusCode() != http.StatusOK {
-		return ViewResponse{}, fmt.Errorf("bad status: %s", resp.Status())
+		return ViewResponse{}, crawler.NewHTTPStatusError("bilibili", "/x/web-interface/view", resp.StatusCode(), resp.String())
 	}
 	if out.Code != 0 {
 		return ViewResponse{}, fmt.Errorf("bilibili api error: code=%d message=%s", out.Code, out.Message)
