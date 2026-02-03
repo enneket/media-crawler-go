@@ -48,7 +48,7 @@
 ## 待转写（P1，中优先）
 - [x] WebUI：可视化配置、任务管理、日志与数据预览（内置静态页 + API）。
 - [x] WebSocket：推送 logs/status（对齐 Python `/api/ws/logs`、`/api/ws/status`）。
-- [ ] 词云等增值能力：评论词云（读取 comments 数据生成图片）。
+- [x] 词云等增值能力：评论词云（读取 comments 数据生成图片）。
 - [x] 测试体系：按平台/模式的可回放测试（mock HTTP + 签名模块单测）。
 - [ ] 存储后端扩展：Excel、MySQL/Postgres、MongoDB（按需）。
 - [ ] Cache 抽象：memory/redis（用于跨流程去重、签名/代理缓存等按需场景）。

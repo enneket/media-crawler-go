@@ -214,6 +214,19 @@ function bindEvents() {
   };
 
   el("btnLoadData").onclick = refreshDataFiles;
+  el("btnWordcloud").onclick = async () => {
+    const platform = el("platform").value;
+    const noteId = el("wordcloudNoteId").value.trim();
+    const qs = new URLSearchParams({
+      platform,
+      save: "true",
+      min_count: "2",
+      max_words: "200",
+    });
+    if (noteId) qs.set("note_id", noteId);
+    window.open(`/data/wordcloud?${qs.toString()}`, "_blank", "noreferrer");
+    await refreshDataFiles();
+  };
   el("btnPreview").onclick = previewSelectedFile;
   el("btnClearLogs").onclick = () => (el("logs").textContent = "");
 

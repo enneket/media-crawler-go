@@ -150,6 +150,7 @@ func listDataFiles(dataDir string, q url.Values) ([]dataFileInfo, error) {
 		".jsonl": {},
 		".csv":   {},
 		".db":    {},
+		".svg":   {},
 	}
 
 	if _, err := os.Stat(dataDir); err != nil {

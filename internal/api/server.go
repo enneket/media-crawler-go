@@ -41,6 +41,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /data/files/", s.handleDataFile)
 	s.mux.HandleFunc("GET /data/download/", s.handleDataDownload)
 	s.mux.HandleFunc("GET /data/stats", s.handleDataStats)
+	s.mux.HandleFunc("GET /data/wordcloud", s.handleDataWordcloud)
 	s.mux.HandleFunc("GET /ws/logs", s.handleWSLogs)
 	s.mux.HandleFunc("GET /ws/status", s.handleWSStatus)
 	s.mux.Handle("GET /assets/", http.StripPrefix("/assets/", s.webUIAssetsHandler()))
