@@ -65,23 +65,31 @@ func NewClient(signer *Signer, userAgent string) *Client {
 	rc.SetRetryCount(retryCount)
 	rc.SetRetryWaitTime(time.Duration(baseMs) * time.Millisecond)
 	rc.SetRetryMaxWaitTime(time.Duration(maxMs) * time.Millisecond)
-	rc.AddRetryCondition(func(r *resty.Response, err error) bool {
-		if err != nil {
-			return true
-		}
-		if r == nil {
-			return false
-		}
-		code := r.StatusCode()
-		return code == http.StatusTooManyRequests || (code >= 500 && code <= 599)
-	})
-	return &Client{
+	out := &Client{
 		httpClient: rc,
 		signer:     signer,
 		switcher:   switcher,
 		userAgent:  userAgent,
 	}
+	rc.AddRetryCondition(func(r *resty.Response, err error) bool {
+		if err != nil {
+			return crawler.ShouldRetryError(err)
+		}
+		if r == nil {
+			return true
+		}
+		code := r.StatusCode()
+		if out.proxyPool != nil && crawler.ShouldInvalidateProxyStatus(code) {
+			out.proxyPool.InvalidateCurrent()
+		}
+		if code == http.StatusForbidden && out.proxyPool != nil {
+			return true
+		}
+		return crawler.ShouldRetryStatus(code)
+	})
+	return out
 }
+
 
 func (c *Client) InitProxyPool(pool *proxy.Pool) {
 	c.proxyPool = pool

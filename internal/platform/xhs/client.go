@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
+	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/proxy"
+	"math/rand"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -24,7 +27,11 @@ type Client struct {
 	ProxySwitcher *proxy.Switcher
 }
 
+var randSeedOnce sync.Once
+
 func NewClient(signer *Signer) *Client {
+	randSeedOnce.Do(func() { rand.Seed(time.Now().UnixNano()) })
+
 	switcher := proxy.NewSwitcher()
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = switcher.ProxyFunc
@@ -106,15 +113,22 @@ func (c *Client) ensureProxy(ctx context.Context) error {
 	return c.ProxySwitcher.Set(proxyURL)
 }
 
-func (c *Client) Post(uri string, data interface{}, result interface{}) error {
+func (c *Client) Post(ctx context.Context, uri string, data interface{}, result interface{}) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	retryCount, baseDelay, maxDelay := retryParams()
 	var lastErr error
 
 	for attempt := 0; attempt < retryCount; attempt++ {
-		if err := c.ensureProxy(context.Background()); err != nil {
+		if err := c.ensureProxy(ctx); err != nil {
 			lastErr = err
 			if attempt < retryCount-1 {
-				time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+				delay := backoffDelay(attempt, baseDelay, maxDelay)
+				logger.Warn("xhs request retry (proxy)", "uri", uri, "attempt", attempt+1, "max_attempts", retryCount, "err", err, "sleep_ms", delay.Milliseconds())
+				if !crawler.Sleep(ctx, delay) {
+					return ctx.Err()
+				}
 				continue
 			}
 			return err
@@ -126,7 +140,7 @@ func (c *Client) Post(uri string, data interface{}, result interface{}) error {
 		}
 
 		resp, err := c.HttpClient.R().
-			SetContext(context.Background()).
+			SetContext(ctx).
 			SetHeaders(headers).
 			SetBody(data).
 			SetResult(result).
@@ -149,7 +163,11 @@ func (c *Client) Post(uri string, data interface{}, result interface{}) error {
 			return lastErr
 		}
 		if attempt < retryCount-1 {
-			time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+			delay := backoffDelay(attempt, baseDelay, maxDelay)
+			logger.Warn("xhs request retry", "uri", uri, "attempt", attempt+1, "max_attempts", retryCount, "kind", string(crawler.KindOf(lastErr)), "err", lastErr, "sleep_ms", delay.Milliseconds())
+			if !crawler.Sleep(ctx, delay) {
+				return ctx.Err()
+			}
 		}
 	}
 
@@ -157,14 +175,14 @@ func (c *Client) Post(uri string, data interface{}, result interface{}) error {
 }
 
 func (c *Client) Pong() bool {
-	res, err := c.GetNoteByKeyword("Xiaohongshu", 1)
+	res, err := c.GetNoteByKeyword(context.Background(), "Xiaohongshu", 1)
 	if err != nil {
 		return false
 	}
 	return len(res.Items) > 0
 }
 
-func (c *Client) GetNoteByKeyword(keyword string, page int) (*SearchResult, error) {
+func (c *Client) GetNoteByKeyword(ctx context.Context, keyword string, page int) (*SearchResult, error) {
 	uri := "/api/sns/web/v1/search/notes"
 	sort := config.AppConfig.SortType
 	if sort == "" {
@@ -188,7 +206,7 @@ func (c *Client) GetNoteByKeyword(keyword string, page int) (*SearchResult, erro
 	}
 
 	var resp Response
-	err := c.Post(uri, data, &resp)
+	err := c.Post(ctx, uri, data, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +218,10 @@ func (c *Client) GetNoteByKeyword(keyword string, page int) (*SearchResult, erro
 	return &resp.Data, nil
 }
 
-func (c *Client) GetNotesByCreator(userId, cursor string) (*CreatorNotesResult, error) {
+func (c *Client) GetNotesByCreator(ctx context.Context, userId, cursor string) (*CreatorNotesResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	uri := "/api/sns/web/v1/user_posted"
 	params := map[string]string{
 		"user_id":       userId,
@@ -221,10 +242,14 @@ func (c *Client) GetNotesByCreator(userId, cursor string) (*CreatorNotesResult, 
 	var lastErr error
 
 	for attempt := 0; attempt < retryCount; attempt++ {
-		if err := c.ensureProxy(context.Background()); err != nil {
+		if err := c.ensureProxy(ctx); err != nil {
 			lastErr = err
 			if attempt < retryCount-1 {
-				time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+				delay := backoffDelay(attempt, baseDelay, maxDelay)
+				logger.Warn("xhs request retry (proxy)", "uri", uri, "attempt", attempt+1, "max_attempts", retryCount, "err", err, "sleep_ms", delay.Milliseconds())
+				if !crawler.Sleep(ctx, delay) {
+					return nil, ctx.Err()
+				}
 				continue
 			}
 			return nil, err
@@ -236,7 +261,7 @@ func (c *Client) GetNotesByCreator(userId, cursor string) (*CreatorNotesResult, 
 		}
 
 		r, err := c.HttpClient.R().
-			SetContext(context.Background()).
+			SetContext(ctx).
 			SetHeaders(headers).
 			SetQueryParams(params).
 			SetResult(&resp).
@@ -261,13 +286,17 @@ func (c *Client) GetNotesByCreator(userId, cursor string) (*CreatorNotesResult, 
 			return nil, lastErr
 		}
 		if attempt < retryCount-1 {
-			time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+			delay := backoffDelay(attempt, baseDelay, maxDelay)
+			logger.Warn("xhs request retry", "uri", uri, "attempt", attempt+1, "max_attempts", retryCount, "kind", string(crawler.KindOf(lastErr)), "err", lastErr, "sleep_ms", delay.Milliseconds())
+			if !crawler.Sleep(ctx, delay) {
+				return nil, ctx.Err()
+			}
 		}
 	}
 	return nil, lastErr
 }
 
-func (c *Client) GetNoteById(noteId, xsecSource, xsecToken string) (*Note, error) {
+func (c *Client) GetNoteById(ctx context.Context, noteId, xsecSource, xsecToken string) (*Note, error) {
 	if xsecSource == "" {
 		xsecSource = "pc_search"
 	}
@@ -293,7 +322,7 @@ func (c *Client) GetNoteById(noteId, xsecSource, xsecToken string) (*Note, error
 	}
 
 	var resp Response
-	err := c.Post(uri, data, &resp)
+	err := c.Post(ctx, uri, data, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +339,10 @@ func (c *Client) GetNoteById(noteId, xsecSource, xsecToken string) (*Note, error
 	return &note, nil
 }
 
-func (c *Client) GetNoteComments(noteId, xsecToken, cursor string) (*CommentResult, error) {
+func (c *Client) GetNoteComments(ctx context.Context, noteId, xsecToken, cursor string) (*CommentResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	uri := "/api/sns/web/v2/comment/page"
 	params := map[string]string{
 		"note_id":        noteId,
@@ -332,10 +364,14 @@ func (c *Client) GetNoteComments(noteId, xsecToken, cursor string) (*CommentResu
 	var lastErr error
 
 	for attempt := 0; attempt < retryCount; attempt++ {
-		if err := c.ensureProxy(context.Background()); err != nil {
+		if err := c.ensureProxy(ctx); err != nil {
 			lastErr = err
 			if attempt < retryCount-1 {
-				time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+				delay := backoffDelay(attempt, baseDelay, maxDelay)
+				logger.Warn("xhs request retry (proxy)", "uri", uri, "attempt", attempt+1, "max_attempts", retryCount, "err", err, "sleep_ms", delay.Milliseconds())
+				if !crawler.Sleep(ctx, delay) {
+					return nil, ctx.Err()
+				}
 				continue
 			}
 			return nil, err
@@ -347,7 +383,7 @@ func (c *Client) GetNoteComments(noteId, xsecToken, cursor string) (*CommentResu
 		}
 
 		r, err := c.HttpClient.R().
-			SetContext(context.Background()).
+			SetContext(ctx).
 			SetHeaders(headers).
 			SetQueryParams(params).
 			SetResult(&resp).
@@ -372,13 +408,20 @@ func (c *Client) GetNoteComments(noteId, xsecToken, cursor string) (*CommentResu
 			return nil, lastErr
 		}
 		if attempt < retryCount-1 {
-			time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+			delay := backoffDelay(attempt, baseDelay, maxDelay)
+			logger.Warn("xhs request retry", "uri", uri, "attempt", attempt+1, "max_attempts", retryCount, "kind", string(crawler.KindOf(lastErr)), "err", lastErr, "sleep_ms", delay.Milliseconds())
+			if !crawler.Sleep(ctx, delay) {
+				return nil, ctx.Err()
+			}
 		}
 	}
 	return nil, lastErr
 }
 
-func (c *Client) GetNoteSubComments(noteId, rootCommentId, xsecToken, cursor string, num int) (*CommentResult, error) {
+func (c *Client) GetNoteSubComments(ctx context.Context, noteId, rootCommentId, xsecToken, cursor string, num int) (*CommentResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	uri := "/api/sns/web/v2/comment/sub/page"
 	if num <= 0 {
 		num = 10
@@ -405,10 +448,14 @@ func (c *Client) GetNoteSubComments(noteId, rootCommentId, xsecToken, cursor str
 	var lastErr error
 
 	for attempt := 0; attempt < retryCount; attempt++ {
-		if err := c.ensureProxy(context.Background()); err != nil {
+		if err := c.ensureProxy(ctx); err != nil {
 			lastErr = err
 			if attempt < retryCount-1 {
-				time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+				delay := backoffDelay(attempt, baseDelay, maxDelay)
+				logger.Warn("xhs request retry (proxy)", "uri", uri, "attempt", attempt+1, "max_attempts", retryCount, "err", err, "sleep_ms", delay.Milliseconds())
+				if !crawler.Sleep(ctx, delay) {
+					return nil, ctx.Err()
+				}
 				continue
 			}
 			return nil, err
@@ -420,7 +467,7 @@ func (c *Client) GetNoteSubComments(noteId, rootCommentId, xsecToken, cursor str
 		}
 
 		r, err := c.HttpClient.R().
-			SetContext(context.Background()).
+			SetContext(ctx).
 			SetHeaders(headers).
 			SetQueryParams(params).
 			SetResult(&resp).
@@ -445,7 +492,11 @@ func (c *Client) GetNoteSubComments(noteId, rootCommentId, xsecToken, cursor str
 			return nil, lastErr
 		}
 		if attempt < retryCount-1 {
-			time.Sleep(backoffDelay(attempt, baseDelay, maxDelay))
+			delay := backoffDelay(attempt, baseDelay, maxDelay)
+			logger.Warn("xhs request retry", "uri", uri, "attempt", attempt+1, "max_attempts", retryCount, "kind", string(crawler.KindOf(lastErr)), "err", lastErr, "sleep_ms", delay.Milliseconds())
+			if !crawler.Sleep(ctx, delay) {
+				return nil, ctx.Err()
+			}
 		}
 	}
 	return nil, lastErr
@@ -480,24 +531,30 @@ func backoffDelay(attempt int, base time.Duration, max time.Duration) time.Durat
 	if d > max {
 		return max
 	}
-	return d
+	jitter := 0.5 + rand.Float64()
+	out := time.Duration(float64(d) * jitter)
+	if out > max {
+		return max
+	}
+	if out < base {
+		return base
+	}
+	return out
 }
 
 func shouldRetry(resp *resty.Response, err error) bool {
 	if err != nil {
-		return true
+		return crawler.ShouldRetryError(err)
 	}
 	if resp == nil {
-		return false
+		return true
 	}
-	code := resp.StatusCode()
-	return code == http.StatusTooManyRequests || (code >= 500 && code <= 599)
+	return crawler.ShouldRetryStatus(resp.StatusCode())
 }
 
 func shouldInvalidateProxy(resp *resty.Response) bool {
 	if resp == nil {
 		return false
 	}
-	code := resp.StatusCode()
-	return code == http.StatusTooManyRequests || code == http.StatusForbidden
+	return crawler.ShouldInvalidateProxyStatus(resp.StatusCode())
 }

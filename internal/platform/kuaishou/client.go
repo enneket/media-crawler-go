@@ -47,13 +47,12 @@ func NewClient() *Client {
 	httpClient.SetRetryMaxWaitTime(maxDelay)
 	httpClient.AddRetryCondition(func(r *resty.Response, err error) bool {
 		if err != nil {
-			return true
+			return crawler.ShouldRetryError(err)
 		}
 		if r == nil {
 			return true
 		}
-		code := r.StatusCode()
-		return code == http.StatusTooManyRequests || (code >= 500 && code <= 599)
+		return crawler.ShouldRetryStatus(r.StatusCode())
 	})
 
 	return &Client{httpClient: httpClient}

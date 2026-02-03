@@ -201,7 +201,7 @@ func (c *XhsCrawler) runSearchMode(ctx context.Context, req crawler.Request) (cr
 			default:
 			}
 
-			res, err := c.client.GetNoteByKeyword(keyword, page)
+			res, err := c.client.GetNoteByKeyword(ctx, keyword, page)
 			if err != nil {
 				logger.Error("search failed", "page", page, "err", err)
 				break
@@ -239,7 +239,7 @@ func (c *XhsCrawler) runSearchMode(ctx context.Context, req crawler.Request) (cr
 
 			r := crawler.ForEachLimit(ctx, tasks, concurrency, func(ctx context.Context, t noteTask) error {
 				logger.Info("note", "nickname", t.Nickname, "title", t.Title, "note_id", t.NoteID)
-				return c.processNote(t.NoteID, t.XsecSource, t.XsecToken)
+				return c.processNote(ctx, t.NoteID, t.XsecSource, t.XsecToken)
 			})
 			out.Succeeded += r.Succeeded
 			out.Failed += r.Failed
@@ -255,7 +255,7 @@ func (c *XhsCrawler) runSearchMode(ctx context.Context, req crawler.Request) (cr
 
 			page++
 			if config.AppConfig.CrawlerMaxSleepSec > 0 {
-				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+				crawler.Sleep(ctx, time.Duration(config.AppConfig.CrawlerMaxSleepSec)*time.Second)
 			}
 		}
 	}
@@ -288,7 +288,7 @@ func (c *XhsCrawler) runDetailMode(ctx context.Context, req crawler.Request) (cr
 			return crawler.Error{Kind: crawler.ErrorKindInvalidInput, Platform: req.Platform, URL: input, Msg: "invalid xhs url"}
 		}
 		logger.Info("processing note", "note_id", noteID)
-		return c.processNote(noteID, "", "")
+		return c.processNote(ctx, noteID, "", "")
 	})
 	out.Processed = r.Processed
 	out.Succeeded = r.Succeeded
@@ -349,7 +349,7 @@ func (c *XhsCrawler) runCreatorMode(ctx context.Context, req crawler.Request) (c
 				return out, ctx.Err()
 			default:
 			}
-			res, err := c.client.GetNotesByCreator(creatorID, cursor)
+			res, err := c.client.GetNotesByCreator(ctx, creatorID, cursor)
 			if err != nil {
 				logger.Error("get notes for creator failed", "creator_id", creatorID, "err", err)
 				break
@@ -374,7 +374,7 @@ func (c *XhsCrawler) runCreatorMode(ctx context.Context, req crawler.Request) (c
 
 			r := crawler.ForEachLimit(ctx, tasks, concurrency, func(ctx context.Context, note Note) error {
 				logger.Info("note", "nickname", note.User.Nickname, "title", note.Title, "note_id", note.NoteId)
-				return c.processNote(note.NoteId, note.XsecSource, note.XsecToken)
+				return c.processNote(ctx, note.NoteId, note.XsecSource, note.XsecToken)
 			})
 			out.Succeeded += r.Succeeded
 			out.Failed += r.Failed
@@ -389,7 +389,7 @@ func (c *XhsCrawler) runCreatorMode(ctx context.Context, req crawler.Request) (c
 			}
 			cursor = res.Cursor
 			if config.AppConfig.CrawlerMaxSleepSec > 0 {
-				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+				crawler.Sleep(ctx, time.Duration(config.AppConfig.CrawlerMaxSleepSec)*time.Second)
 			}
 		}
 	}
@@ -430,9 +430,12 @@ func (c *XhsCrawler) fetchAndSaveCreator(userID string) error {
 	return store.SaveCreator(userID, record)
 }
 
-func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) error {
+func (c *XhsCrawler) processNote(ctx context.Context, noteId, xsecSource, xsecToken string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	logger.Info("fetching note detail", "note_id", noteId)
-	noteDetail, err := c.client.GetNoteById(noteId, xsecSource, xsecToken)
+	noteDetail, err := c.client.GetNoteById(ctx, noteId, xsecSource, xsecToken)
 	if err != nil {
 		logger.Error("get note detail failed", "note_id", noteId, "err", err)
 		return err
@@ -493,7 +496,7 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) error {
 		}
 
 		logger.Info("fetching comments", "note_id", noteId)
-		comments, err := c.fetchAllComments(noteId, token)
+		comments, err := c.fetchAllComments(ctx, noteId, token)
 		if err != nil {
 			logger.Error("get comments failed", "note_id", noteId, "err", err)
 		} else {
@@ -535,7 +538,10 @@ func (c *XhsCrawler) processNote(noteId, xsecSource, xsecToken string) error {
 	return nil
 }
 
-func (c *XhsCrawler) fetchAllComments(noteId, xsecToken string) ([]Comment, error) {
+func (c *XhsCrawler) fetchAllComments(ctx context.Context, noteId, xsecToken string) ([]Comment, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	maxCount := config.AppConfig.CrawlerMaxComments
 	if maxCount == 0 {
 		maxCount = -1
@@ -545,7 +551,7 @@ func (c *XhsCrawler) fetchAllComments(noteId, xsecToken string) ([]Comment, erro
 	cursor := ""
 	hasMore := true
 	for hasMore && (maxCount < 0 || len(all) < maxCount) {
-		res, err := c.client.GetNoteComments(noteId, xsecToken, cursor)
+		res, err := c.client.GetNoteComments(ctx, noteId, xsecToken, cursor)
 		if err != nil {
 			return all, err
 		}
@@ -564,7 +570,7 @@ func (c *XhsCrawler) fetchAllComments(noteId, xsecToken string) ([]Comment, erro
 			if maxCount >= 0 {
 				remaining = maxCount - len(all)
 			}
-			sub := c.fetchSubComments(noteId, xsecToken, pageComments, remaining)
+			sub := c.fetchSubComments(ctx, noteId, xsecToken, pageComments, remaining)
 			if remaining >= 0 && len(sub) > remaining {
 				sub = sub[:remaining]
 			}
@@ -572,20 +578,28 @@ func (c *XhsCrawler) fetchAllComments(noteId, xsecToken string) ([]Comment, erro
 		}
 
 		if hasMore && cursor != "" && (maxCount < 0 || len(all) < maxCount) {
-			time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+			crawler.Sleep(ctx, time.Duration(config.AppConfig.CrawlerMaxSleepSec)*time.Second)
 		}
 	}
 
 	return all, nil
 }
 
-func (c *XhsCrawler) fetchSubComments(noteId, xsecToken string, comments []Comment, remaining int) []Comment {
+func (c *XhsCrawler) fetchSubComments(ctx context.Context, noteId, xsecToken string, comments []Comment, remaining int) []Comment {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if !config.AppConfig.EnableGetSubComments {
 		return nil
 	}
 
 	var out []Comment
 	for _, root := range comments {
+		select {
+		case <-ctx.Done():
+			return out
+		default:
+		}
 		if remaining >= 0 && len(out) >= remaining {
 			break
 		}
@@ -609,11 +623,16 @@ func (c *XhsCrawler) fetchSubComments(noteId, xsecToken string, comments []Comme
 		cursor := root.SubCommentCursor
 		hasMore := true
 		for hasMore {
+			select {
+			case <-ctx.Done():
+				return out
+			default:
+			}
 			if remaining >= 0 && len(out) >= remaining {
 				return out
 			}
 
-			res, err := c.client.GetNoteSubComments(noteId, root.Id, xsecToken, cursor, 10)
+			res, err := c.client.GetNoteSubComments(ctx, noteId, root.Id, xsecToken, cursor, 10)
 			if err != nil {
 				break
 			}
@@ -630,7 +649,7 @@ func (c *XhsCrawler) fetchSubComments(noteId, xsecToken string, comments []Comme
 			}
 
 			if hasMore && cursor != "" {
-				time.Sleep(time.Duration(config.AppConfig.CrawlerMaxSleepSec) * time.Second)
+				crawler.Sleep(ctx, time.Duration(config.AppConfig.CrawlerMaxSleepSec)*time.Second)
 			} else {
 				break
 			}
