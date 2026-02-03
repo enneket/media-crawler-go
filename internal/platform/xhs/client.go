@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/proxy"
 	"net/http"
 	"strings"
@@ -138,7 +139,7 @@ func (c *Client) Post(uri string, data interface{}, result interface{}) error {
 		if err != nil {
 			lastErr = err
 		} else {
-			lastErr = fmt.Errorf("status: %d, body: %s", resp.StatusCode(), resp.String())
+			lastErr = crawler.NewHTTPStatusError("xhs", uri, resp.StatusCode(), resp.String())
 		}
 
 		if shouldInvalidateProxy(resp) && c.ProxyPool != nil {
@@ -248,7 +249,7 @@ func (c *Client) GetNotesByCreator(userId, cursor string) (*CreatorNotesResult, 
 		if err != nil {
 			lastErr = err
 		} else if r.IsError() {
-			lastErr = fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+			lastErr = crawler.NewHTTPStatusError("xhs", uri, r.StatusCode(), r.String())
 		} else {
 			lastErr = fmt.Errorf("api error: %s", resp.Msg)
 		}
@@ -359,7 +360,7 @@ func (c *Client) GetNoteComments(noteId, xsecToken, cursor string) (*CommentResu
 		if err != nil {
 			lastErr = err
 		} else if r.IsError() {
-			lastErr = fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+			lastErr = crawler.NewHTTPStatusError("xhs", uri, r.StatusCode(), r.String())
 		} else {
 			lastErr = fmt.Errorf("api error: %s", resp.Msg)
 		}
@@ -432,7 +433,7 @@ func (c *Client) GetNoteSubComments(noteId, rootCommentId, xsecToken, cursor str
 		if err != nil {
 			lastErr = err
 		} else if r.IsError() {
-			lastErr = fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+			lastErr = crawler.NewHTTPStatusError("xhs", uri, r.StatusCode(), r.String())
 		} else {
 			lastErr = fmt.Errorf("api error: %s", resp.Msg)
 		}

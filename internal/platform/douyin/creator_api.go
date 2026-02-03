@@ -3,6 +3,7 @@ package douyin
 import (
 	"context"
 	"fmt"
+	"media-crawler-go/internal/crawler"
 	"net/url"
 )
 
@@ -38,7 +39,7 @@ func (c *Client) GetUserInfo(ctx context.Context, secUserID string, msToken stri
 		return nil, err
 	}
 	if r.IsError() {
-		return nil, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		return nil, crawler.NewHTTPStatusError("douyin", "/aweme/v1/web/user/profile/other/", r.StatusCode(), r.String())
 	}
 	return out, nil
 }
@@ -75,7 +76,7 @@ func (c *Client) GetUserAwemePosts(ctx context.Context, secUserID string, maxCur
 		return out, err
 	}
 	if r.IsError() {
-		return out, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		return out, crawler.NewHTTPStatusError("douyin", "/aweme/v1/web/aweme/post/", r.StatusCode(), r.String())
 	}
 	return out, nil
 }

@@ -2,8 +2,8 @@ package kuaishou
 
 import (
 	"context"
-	"fmt"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"net/http"
 	"time"
 
@@ -78,7 +78,7 @@ func (c *Client) FetchHTML(ctx context.Context, url string) (FetchResult, error)
 		return FetchResult{}, err
 	}
 	if r.IsError() {
-		return FetchResult{}, fmt.Errorf("http status=%d body=%s", r.StatusCode(), r.String())
+		return FetchResult{}, crawler.NewHTTPStatusError("kuaishou", url, r.StatusCode(), r.String())
 	}
 	body := r.Body()
 	out := FetchResult{

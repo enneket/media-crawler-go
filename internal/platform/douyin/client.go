@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"media-crawler-go/internal/config"
+	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/proxy"
 	"net/http"
 	"net/url"
@@ -150,7 +151,7 @@ func (c *Client) GetVideoByID(ctx context.Context, awemeID string, msToken strin
 		return nil, err
 	}
 	if r.IsError() {
-		return nil, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		return nil, crawler.NewHTTPStatusError("douyin", "/aweme/v1/web/aweme/detail/", r.StatusCode(), r.String())
 	}
 
 	awemeAny := resp["aweme_detail"]

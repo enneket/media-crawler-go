@@ -47,6 +47,12 @@ func TestKindOf(t *testing.T) {
 		}
 	}
 	{
+		err := NewHTTPStatusError("x", "u", 429, "nope")
+		if got := KindOf(err); got != ErrorKindRateLimited {
+			t.Fatalf("wrapped 429 got=%s", got)
+		}
+	}
+	{
 		err := errors.New("something else")
 		if got := KindOf(err); got != ErrorKindUnknown {
 			t.Fatalf("unknown got=%s", got)

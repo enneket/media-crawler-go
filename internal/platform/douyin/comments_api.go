@@ -3,6 +3,7 @@ package douyin
 import (
 	"context"
 	"fmt"
+	"media-crawler-go/internal/crawler"
 	"net/url"
 	"time"
 )
@@ -40,7 +41,7 @@ func (c *Client) GetAwemeComments(ctx context.Context, awemeID string, cursor in
 		return commentListResp{}, err
 	}
 	if r.IsError() {
-		return commentListResp{}, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		return commentListResp{}, crawler.NewHTTPStatusError("douyin", "/aweme/v1/web/comment/list/", r.StatusCode(), r.String())
 	}
 	return out, nil
 }
@@ -73,7 +74,7 @@ func (c *Client) GetAwemeSubComments(ctx context.Context, awemeID string, rootCo
 		return commentListResp{}, err
 	}
 	if r.IsError() {
-		return commentListResp{}, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		return commentListResp{}, crawler.NewHTTPStatusError("douyin", "/aweme/v1/web/comment/list/reply/", r.StatusCode(), r.String())
 	}
 	return out, nil
 }

@@ -3,6 +3,7 @@ package douyin
 import (
 	"context"
 	"fmt"
+	"media-crawler-go/internal/crawler"
 	"net/url"
 )
 
@@ -54,7 +55,7 @@ func (c *Client) SearchInfoByKeyword(ctx context.Context, keyword string, offset
 		return out, err
 	}
 	if r.IsError() {
-		return out, fmt.Errorf("status: %d, body: %s", r.StatusCode(), r.String())
+		return out, crawler.NewHTTPStatusError("douyin", "/aweme/v1/web/general/search/single/", r.StatusCode(), r.String())
 	}
 	return out, nil
 }
