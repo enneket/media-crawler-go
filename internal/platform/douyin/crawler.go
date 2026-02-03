@@ -504,6 +504,21 @@ func (c *DouyinCrawler) processOneAweme(ctx context.Context, awemeID string, msT
 				if err != nil {
 					logger.Error("save comments csv failed", "aweme_id", awemeID, "err", err)
 				}
+			} else if config.AppConfig.SaveDataOption == "xlsx" {
+				items := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, &comments[i])
+				}
+				_, err := store.AppendUniqueCommentsXLSX(
+					awemeID,
+					items,
+					func(item any) (string, error) { return item.(*Comment).CID, nil },
+					(&Comment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+				)
+				if err != nil {
+					logger.Error("save comments xlsx failed", "aweme_id", awemeID, "err", err)
+				}
 			} else {
 				items := make([]any, 0, len(comments))
 				for i := range comments {

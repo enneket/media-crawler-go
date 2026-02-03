@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/xuri/excelize/v2"
 )
 
 func TestAppendUniqueJSONL(t *testing.T) {
@@ -84,5 +86,61 @@ func TestAppendUniqueCSV(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("expected 1 appended, got %d", n)
+	}
+}
+
+func TestAppendUniqueXLSX(t *testing.T) {
+	dir := t.TempDir()
+	items := []any{"1", "2", "2", "3"}
+	n, err := AppendUniqueXLSX(
+		dir,
+		"comments.xlsx",
+		"comments.idx",
+		items,
+		func(item any) (string, error) { return item.(string), nil },
+		[]string{"id"},
+		func(item any) ([]string, error) { return []string{item.(string)}, nil },
+	)
+	if err != nil {
+		t.Fatalf("AppendUniqueXLSX err: %v", err)
+	}
+	if n != 3 {
+		t.Fatalf("expected 3 appended, got %d", n)
+	}
+
+	n, err = AppendUniqueXLSX(
+		dir,
+		"comments.xlsx",
+		"comments.idx",
+		[]any{"3", "4"},
+		func(item any) (string, error) { return item.(string), nil },
+		[]string{"id"},
+		func(item any) ([]string, error) { return []string{item.(string)}, nil },
+	)
+	if err != nil {
+		t.Fatalf("AppendUniqueXLSX err: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("expected 1 appended, got %d", n)
+	}
+
+	f, err := excelize.OpenFile(filepath.Join(dir, "comments.xlsx"))
+	if err != nil {
+		t.Fatalf("open xlsx: %v", err)
+	}
+	defer func() { _ = f.Close() }()
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		t.Fatalf("expected at least 1 sheet")
+	}
+	rows, err := f.GetRows(sheets[0])
+	if err != nil {
+		t.Fatalf("get rows: %v", err)
+	}
+	if len(rows) != 5 {
+		t.Fatalf("expected 5 rows (header+4 data), got %d", len(rows))
+	}
+	if len(rows[0]) != 1 || rows[0][0] != "id" {
+		t.Fatalf("unexpected header: %#v", rows[0])
 	}
 }

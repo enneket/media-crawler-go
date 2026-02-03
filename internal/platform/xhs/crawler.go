@@ -517,6 +517,23 @@ func (c *XhsCrawler) processNote(ctx context.Context, noteId, xsecSource, xsecTo
 				if err != nil {
 					logger.Error("save comments csv failed", "note_id", noteId, "err", err)
 				}
+			} else if config.AppConfig.SaveDataOption == "xlsx" {
+				items := make([]any, 0, len(comments))
+				for i := range comments {
+					comment := comments[i]
+					comment.NoteId = noteId
+					items = append(items, &comment)
+				}
+				_, err := store.AppendUniqueCommentsXLSX(
+					noteId,
+					items,
+					func(item any) (string, error) { return item.(*Comment).Id, nil },
+					(&Comment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+				)
+				if err != nil {
+					logger.Error("save comments xlsx failed", "note_id", noteId, "err", err)
+				}
 			} else {
 				items := make([]any, 0, len(comments))
 				for i := range comments {

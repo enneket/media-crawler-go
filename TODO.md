@@ -35,7 +35,7 @@
 
 ### 存储/数据
 - [x] MongoDB 存储后端（支持 notes/creators/comments；并在 /config/options 暴露 mongodb）。
-- [ ] comments 的 CSV/XLSX 导出形态未对齐：当前 SaveComments 更偏 JSON 透传，CSV/XLSX 需要统一 Comment 模型/传参。
+- [ ] comments 的导出形态未完全对齐：已支持 xhs/douyin per-note CSV/XLSX；仍缺少跨平台统一 Comment 模型与全局导出。
 
 ### 登录
 - [ ] LOGIN_TYPE=phone/qrcode 的“自动化流程”未对齐：目前主要是打开浏览器后人工完成登录 + cookie 注入。
