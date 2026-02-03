@@ -34,6 +34,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /status", s.handleStatus)
 	s.mux.HandleFunc("POST /run", s.handleRun)
 	s.mux.HandleFunc("POST /stop", s.handleStop)
+	s.mux.HandleFunc("GET /data/files", s.handleDataFilesList)
+	s.mux.HandleFunc("GET /data/files/", s.handleDataFile)
+	s.mux.HandleFunc("GET /data/download/", s.handleDataDownload)
+	s.mux.HandleFunc("GET /data/stats", s.handleDataStats)
 }
 
 func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {

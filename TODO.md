@@ -11,6 +11,7 @@
 - [x] JSON Lines / CSV 追加写存储（notes/comments）。
 - [x] 简单媒体下载（HTTP GET 并发）。
 - [x] 代理池：支持失效切换（rate-limit/403 时 InvalidateCurrent，下次请求自动换 IP）。
+- [x] Data API：浏览/预览/下载 data 目录文件（/data/files /data/download /data/stats）。
 
 ### 小红书（xhs）
 - [x] Playwright persistent context 启动与登录态复用（`USER_DATA_DIR`）。
@@ -46,8 +47,26 @@
 
 ## 待转写（P1，中优先）
 - [ ] WebUI：可视化配置、任务管理、日志与数据预览。
+- [ ] WebSocket：推送 logs/status（对齐 Python `/api/ws/logs`、`/api/ws/status`）。
 - [ ] 词云等增值能力：评论词云（读取 comments 数据生成图片）。
 - [ ] 测试体系：按平台/模式的可回放测试（mock HTTP + 签名模块单测）。
+- [ ] 存储后端扩展：Excel、MySQL/Postgres、MongoDB（按需）。
+- [ ] Cache 抽象：memory/redis（用于跨流程去重、签名/代理缓存等按需场景）。
+
+## 与 Python 版差异（待补齐）
+
+### API/WebUI
+- [ ] 配置接口：/config/platforms、/config/options（对齐 Python WebUI 动态渲染所需的选项接口）。
+- [ ] 环境自检：/env/check（对齐 Python 版“命令行 --help”自检逻辑）。
+- [ ] WebUI 静态托管：挂载前端产物，根路径返回 index.html。
+- [ ] WebSocket：日志流与状态流。
+
+### 平台覆盖
+- [ ] 将 bilibili/weibo/tieba/zhihu/ks 从“detail 最小闭环”扩展到 search/creator（先补参数与落盘，再补分页/并发与风控）。
+
+### 存储/数据
+- [ ] 输出目录可配置（当前固定 data/，对齐 Python 更灵活的输出形态）。
+- [ ] Excel 与更多 DB 后端（按实际需求取舍）。
 
 ## 开发任务清单（可执行）
 - [x] T-001 抽象 Platform 接口 + registry，并改造 cmd 入口。
@@ -57,3 +76,9 @@
 - [x] T-005 补齐其他平台：先实现 B 站 detail 最小闭环。
 - [x] T-006 补齐其他平台：再实现 微博 detail 最小闭环。
 - [x] T-007 增加统一 logger（结构化）并替换 fmt.Printf。
+- [x] T-008 增加 Data API：/data/files、/data/files/{path} 预览、/data/download、/data/stats。
+- [ ] T-009 WebSocket：/ws/logs、/ws/status（内置任务执行器直接推送，无需子进程）。
+- [ ] T-010 WebUI：静态资源托管 + 配置页 + 任务页（复用 T-008/T-009）。
+- [ ] T-011 扩展更多平台能力：bili/wb/tieba/zhihu/ks 的 search/creator。
+- [ ] T-012 存储扩展：Excel（可选）与输出目录配置。
+- [ ] T-013 测试体系：可回放的 HTTP fixture（签名/接口解析稳定性）。
