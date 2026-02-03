@@ -13,18 +13,20 @@ import (
 )
 
 type Status struct {
-	State         string         `json:"state"`
-	Platform      string         `json:"platform,omitempty"`
-	Crawler       string         `json:"crawler_type,omitempty"`
-	StartedAt     int64          `json:"started_at,omitempty"`
-	FinishedAt    int64          `json:"finished_at,omitempty"`
-	Processed     int            `json:"processed,omitempty"`
-	Succeeded     int            `json:"succeeded,omitempty"`
-	Failed        int            `json:"failed,omitempty"`
-	FailureKinds  map[string]int `json:"failure_kinds,omitempty"`
-	LastError     string         `json:"last_error,omitempty"`
-	LastErrorKind string         `json:"last_error_kind,omitempty"`
-	LastRiskHint  string         `json:"last_risk_hint,omitempty"`
+	State          string         `json:"state"`
+	Platform       string         `json:"platform,omitempty"`
+	Crawler        string         `json:"crawler_type,omitempty"`
+	StartedAt      int64          `json:"started_at,omitempty"`
+	FinishedAt     int64          `json:"finished_at,omitempty"`
+	Processed      int            `json:"processed,omitempty"`
+	Succeeded      int            `json:"succeeded,omitempty"`
+	Failed         int            `json:"failed,omitempty"`
+	FailureKinds   map[string]int `json:"failure_kinds,omitempty"`
+	LastError      string         `json:"last_error,omitempty"`
+	LastErrorKind  string         `json:"last_error_kind,omitempty"`
+	LastRiskHint   string         `json:"last_risk_hint,omitempty"`
+	LastErrorURL   string         `json:"last_error_url,omitempty"`
+	LastHTTPStatus int            `json:"last_http_status,omitempty"`
 }
 
 type RunRequest struct {
@@ -124,16 +126,22 @@ func (m *TaskManager) Run(req RunRequest) error {
 			m.status.LastError = err.Error()
 			m.status.LastErrorKind = string(crawler.KindOf(err))
 			var ce crawler.Error
-			if errors.As(err, &ce) && ce.Kind == crawler.ErrorKindRiskHint {
-				m.status.LastRiskHint = ce.Hint
-				if m.status.LastRiskHint == "" {
-					m.status.LastRiskHint = ce.Msg
+			if errors.As(err, &ce) {
+				m.status.LastErrorURL = ce.URL
+				m.status.LastHTTPStatus = ce.StatusCode
+				if ce.Kind == crawler.ErrorKindRiskHint {
+					m.status.LastRiskHint = ce.Hint
+					if m.status.LastRiskHint == "" {
+						m.status.LastRiskHint = ce.Msg
+					}
 				}
 			}
 		} else {
 			m.status.LastError = ""
 			m.status.LastErrorKind = ""
 			m.status.LastRiskHint = ""
+			m.status.LastErrorURL = ""
+			m.status.LastHTTPStatus = 0
 		}
 	}()
 	return nil

@@ -56,11 +56,17 @@ func main() {
 	if err != nil {
 		errorKind := crawler.KindOf(err)
 		riskHint := ""
+		errorURL := ""
+		httpStatus := 0
 		var ce crawler.Error
-		if errors.As(err, &ce) && ce.Kind == crawler.ErrorKindRiskHint {
-			riskHint = ce.Hint
+		if errors.As(err, &ce) {
+			errorURL = ce.URL
+			httpStatus = ce.StatusCode
+			if ce.Kind == crawler.ErrorKindRiskHint {
+				riskHint = ce.Hint
+			}
 		}
-		logger.Error("crawler failed", "err", err, "error_kind", errorKind, "risk_hint", riskHint, "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed, "failure_kinds", res.FailureKinds)
+		logger.Error("crawler failed", "err", err, "error_kind", errorKind, "risk_hint", riskHint, "error_url", errorURL, "http_status", httpStatus, "platform", res.Platform, "mode", res.Mode, "processed", res.Processed, "succeeded", res.Succeeded, "failed", res.Failed, "failure_kinds", res.FailureKinds)
 		os.Exit(1)
 	}
 

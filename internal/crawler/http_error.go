@@ -25,9 +25,10 @@ func NewHTTPStatusError(platform, url string, statusCode int, body string) error
 	}
 
 	return Error{
-		Kind:     kind,
-		Platform: platform,
-		URL:      url,
-		Msg:      msg,
+		Kind:       kind,
+		Platform:   platform,
+		URL:        url,
+		StatusCode: statusCode,
+		Msg:        msg,
 	}
 }

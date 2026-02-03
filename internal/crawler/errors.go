@@ -23,12 +23,13 @@ const (
 )
 
 type Error struct {
-	Kind     ErrorKind
-	Platform string
-	URL      string
-	Hint     string
-	Msg      string
-	Err      error
+	Kind       ErrorKind
+	Platform   string
+	URL        string
+	StatusCode int
+	Hint       string
+	Msg        string
+	Err        error
 }
 
 func (e Error) Error() string {

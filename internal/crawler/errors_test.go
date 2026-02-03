@@ -53,6 +53,16 @@ func TestKindOf(t *testing.T) {
 		}
 	}
 	{
+		err := NewHTTPStatusError("x", "u", 403, "nope")
+		var ce Error
+		if !errors.As(err, &ce) {
+			t.Fatalf("as crawler.Error")
+		}
+		if ce.StatusCode != 403 {
+			t.Fatalf("status_code=%d", ce.StatusCode)
+		}
+	}
+	{
 		err := errors.New("something else")
 		if got := KindOf(err); got != ErrorKindUnknown {
 			t.Fatalf("unknown got=%s", got)
