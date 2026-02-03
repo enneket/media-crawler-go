@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strings"
+	"regexp"
+	"strconv"
 )
 
 type ErrorKind string
@@ -17,6 +18,8 @@ const (
 	ErrorKindInvalidInput ErrorKind = "invalid_input"
 	ErrorKindCanceled     ErrorKind = "canceled"
 	ErrorKindTimeout      ErrorKind = "timeout"
+	ErrorKindRateLimited  ErrorKind = "rate_limited"
+	ErrorKindForbidden    ErrorKind = "forbidden"
 )
 
 type Error struct {
@@ -47,6 +50,8 @@ func (e Error) Error() string {
 
 func (e Error) Unwrap() error { return e.Err }
 
+var reHTTPStatus = regexp.MustCompile(`(?i)\bhttp status=(\d{3})\b`)
+
 func KindOf(err error) ErrorKind {
 	if err == nil {
 		return ""
@@ -65,9 +70,17 @@ func KindOf(err error) ErrorKind {
 	if errors.As(err, &ne) && ne.Timeout() {
 		return ErrorKindTimeout
 	}
-	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "http status=") {
-		return ErrorKindHTTP
+	msg := err.Error()
+	if m := reHTTPStatus.FindStringSubmatch(msg); len(m) == 2 {
+		code, _ := strconv.Atoi(m[1])
+		switch code {
+		case 401, 403:
+			return ErrorKindForbidden
+		case 429:
+			return ErrorKindRateLimited
+		default:
+			return ErrorKindHTTP
+		}
 	}
 	return ErrorKindUnknown
 }

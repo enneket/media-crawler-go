@@ -35,7 +35,7 @@
 
 ## 进行中（Go）
 - [x] 平台编排抽象：internal/crawler + platform registry 统一分发（Runner/Request/Result）。
-- [ ] 更完善的错误处理：统一重试/限速/风控提示与可观测性（日志/metrics；已具备 risk_hint + failure_kinds 统计）。
+- [ ] 更完善的错误处理：统一重试/限速/风控提示与可观测性（日志/metrics；已具备 risk_hint + failure_kinds 统计，且 403/429 分别归类 forbidden/rate_limited）。
 
 ## 待转写（P0，高优先）
 - [x] 平台接口与注册表：统一 Search/Detail/Creator 的输入输出与并发控制。
