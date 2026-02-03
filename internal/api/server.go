@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"media-crawler-go/internal/cache"
+	"media-crawler-go/internal/config"
 	"net/http"
 	"time"
 )
@@ -11,6 +13,7 @@ import (
 type Server struct {
 	manager *TaskManager
 	mux     *http.ServeMux
+	cache   cache.Cache
 }
 
 func NewServer(manager *TaskManager) *Server {
@@ -20,6 +23,7 @@ func NewServer(manager *TaskManager) *Server {
 	s := &Server{
 		manager: manager,
 		mux:     http.NewServeMux(),
+		cache:   cache.NewFromConfig(config.AppConfig),
 	}
 	s.routes()
 	return s

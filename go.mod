@@ -6,6 +6,7 @@ require (
 	github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3
 	github.com/go-resty/resty/v2 v2.17.1
 	github.com/playwright-community/playwright-go v0.5200.1
+	github.com/redis/go-redis/v9 v9.14.0
 	github.com/spf13/viper v1.21.0
 	github.com/xuri/excelize/v2 v2.10.0
 	golang.org/x/net v0.46.0
@@ -13,7 +14,9 @@ require (
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/deckarep/golang-set/v2 v2.7.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

@@ -52,7 +52,7 @@
 - [x] 测试体系：按平台/模式的可回放测试（mock HTTP + 签名模块单测）。
 - [x] 存储后端扩展：Excel（XLSX）。
 - [ ] 存储后端扩展：MySQL/Postgres、MongoDB（按需）。
-- [ ] Cache 抽象：memory/redis（用于跨流程去重、签名/代理缓存等按需场景）。
+- [x] Cache 抽象：memory/redis（用于跨流程去重、签名/代理缓存等按需场景）。
 
 ## 与 Python 版差异（待补齐）
 

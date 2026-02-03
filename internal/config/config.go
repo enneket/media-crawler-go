@@ -17,6 +17,12 @@ type Config struct {
 	DataDir              string `mapstructure:"DATA_DIR"`
 	StoreBackend         string `mapstructure:"STORE_BACKEND"`
 	SQLitePath           string `mapstructure:"SQLITE_PATH"`
+	CacheBackend         string `mapstructure:"CACHE_BACKEND"`
+	CacheDefaultTTLSec   int    `mapstructure:"CACHE_DEFAULT_TTL_SEC"`
+	RedisAddr            string `mapstructure:"REDIS_ADDR"`
+	RedisPassword        string `mapstructure:"REDIS_PASSWORD"`
+	RedisDB              int    `mapstructure:"REDIS_DB"`
+	RedisKeyPrefix       string `mapstructure:"REDIS_KEY_PREFIX"`
 	LogLevel             string `mapstructure:"LOG_LEVEL"`
 	LogFormat            string `mapstructure:"LOG_FORMAT"`
 	HttpTimeoutSec       int    `mapstructure:"HTTP_TIMEOUT_SEC"`
@@ -94,6 +100,12 @@ func LoadConfig(path string) error {
 	viper.SetDefault("DATA_DIR", "data")
 	viper.SetDefault("STORE_BACKEND", "file")
 	viper.SetDefault("SQLITE_PATH", "data/media_crawler.db")
+	viper.SetDefault("CACHE_BACKEND", "memory")
+	viper.SetDefault("CACHE_DEFAULT_TTL_SEC", 600)
+	viper.SetDefault("REDIS_ADDR", "")
+	viper.SetDefault("REDIS_PASSWORD", "")
+	viper.SetDefault("REDIS_DB", 0)
+	viper.SetDefault("REDIS_KEY_PREFIX", "media_crawler:")
 	viper.SetDefault("LOG_LEVEL", "info")
 	viper.SetDefault("LOG_FORMAT", "json")
 	viper.SetDefault("HTTP_TIMEOUT_SEC", 60)

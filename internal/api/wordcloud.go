@@ -73,6 +73,18 @@ func (s *Server) handleDataWordcloud(w http.ResponseWriter, r *http.Request) {
 		height = 200
 	}
 	save := queryBoolDefault(q, "save", true)
+	useCache := queryBoolDefault(q, "cache", true)
+
+	if !save && useCache && s.cache != nil {
+		key := fmt.Sprintf("wordcloud:comments:%s:%s:%d:%d:%d:%d:%d", platform, noteID, maxComments, maxWords, minCount, width, height)
+		if b, ok, err := s.cache.Get(r.Context(), key); err == nil && ok && len(b) > 0 {
+			w.Header().Set("content-type", "image/svg+xml; charset=utf-8")
+			w.Header().Set("content-disposition", `inline; filename="wordcloud.svg"`)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(b)
+			return
+		}
+	}
 
 	ctx := r.Context()
 	texts, err := collectCommentTexts(ctx, dataDir, platform, noteID, maxComments)
@@ -93,6 +105,14 @@ func (s *Server) handleDataWordcloud(w http.ResponseWriter, r *http.Request) {
 
 	seed := seedFor(platform + ":" + noteID)
 	svg := renderWordcloudSVG(counts, width, height, seed)
+	if !save && useCache && s.cache != nil {
+		ttlSec := config.AppConfig.CacheDefaultTTLSec
+		if ttlSec <= 0 {
+			ttlSec = 600
+		}
+		key := fmt.Sprintf("wordcloud:comments:%s:%s:%d:%d:%d:%d:%d", platform, noteID, maxComments, maxWords, minCount, width, height)
+		_ = s.cache.Set(r.Context(), key, []byte(svg), time.Duration(ttlSec)*time.Second)
+	}
 
 	var relPath string
 	if save {
