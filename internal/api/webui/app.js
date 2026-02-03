@@ -52,6 +52,7 @@ function buildRunPayload() {
     if (platform === "xhs") payload.xhs_creator_id_list = creators;
     if (platform === "douyin") payload.dy_creator_id_list = creators;
     if (platform === "weibo") payload.wb_creator_id_list = creators;
+    if (platform === "bilibili") payload.bili_creator_id_list = creators;
   }
 
   return payload;

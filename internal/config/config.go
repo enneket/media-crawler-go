@@ -56,6 +56,8 @@ type Config struct {
 
 	// Bilibili Specific
 	BiliSpecifiedVideoUrls []string `mapstructure:"BILI_SPECIFIED_VIDEO_URL_LIST"`
+	BiliCreatorIdList      []string `mapstructure:"BILI_CREATOR_ID_LIST"`
+	BiliSearchMode         string   `mapstructure:"BILI_SEARCH_MODE"`
 
 	// Weibo Specific
 	WBSpecifiedNoteUrls []string `mapstructure:"WB_SPECIFIED_NOTE_URL_LIST"`
@@ -115,6 +117,8 @@ func LoadConfig(path string) error {
 	viper.SetDefault("CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES", 10)
 	viper.SetDefault("CRAWLER_MAX_SLEEP_SEC", 2)
 	viper.SetDefault("SORT_TYPE", "popularity_descending")
+	viper.SetDefault("BILI_CREATOR_ID_LIST", []string{})
+	viper.SetDefault("BILI_SEARCH_MODE", "video")
 	viper.SetDefault("TIEBA_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("ZHIHU_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("KS_SPECIFIED_NOTE_URL_LIST", []string{})

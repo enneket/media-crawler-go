@@ -7,6 +7,8 @@ import (
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -85,6 +87,116 @@ func (c *Client) GetView(ctx context.Context, bvid string, aid int64) (ViewRespo
 	}
 	if out.Code != 0 {
 		return ViewResponse{}, fmt.Errorf("bilibili api error: code=%d message=%s", out.Code, out.Message)
+	}
+	return out, nil
+}
+
+type SearchResponse struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func (c *Client) SearchVideo(ctx context.Context, keyword string, page int, searchType string) (SearchResponse, error) {
+	keyword = strings.TrimSpace(keyword)
+	if keyword == "" {
+		return SearchResponse{}, fmt.Errorf("empty keyword")
+	}
+	if page <= 0 {
+		page = 1
+	}
+	searchType = strings.ToLower(strings.TrimSpace(searchType))
+	if searchType == "" {
+		searchType = "video"
+	}
+
+	var out SearchResponse
+	resp, err := c.httpClient.R().
+		SetContext(ctx).
+		SetQueryParams(map[string]string{
+			"search_type": searchType,
+			"keyword":     keyword,
+			"page":        strconv.Itoa(page),
+		}).
+		SetResult(&out).
+		Get("/x/web-interface/search/type")
+	if err != nil {
+		return SearchResponse{}, err
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return SearchResponse{}, crawler.NewHTTPStatusError("bilibili", "/x/web-interface/search/type", resp.StatusCode(), resp.String())
+	}
+	if out.Code != 0 {
+		return SearchResponse{}, fmt.Errorf("bilibili api error: code=%d message=%s", out.Code, out.Message)
+	}
+	return out, nil
+}
+
+type UpInfoResponse struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func (c *Client) GetUpInfo(ctx context.Context, mid string) (UpInfoResponse, error) {
+	mid = strings.TrimSpace(mid)
+	if mid == "" {
+		return UpInfoResponse{}, fmt.Errorf("empty mid")
+	}
+	var out UpInfoResponse
+	resp, err := c.httpClient.R().
+		SetContext(ctx).
+		SetQueryParam("mid", mid).
+		SetResult(&out).
+		Get("/x/space/acc/info")
+	if err != nil {
+		return UpInfoResponse{}, err
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return UpInfoResponse{}, crawler.NewHTTPStatusError("bilibili", "/x/space/acc/info", resp.StatusCode(), resp.String())
+	}
+	if out.Code != 0 {
+		return UpInfoResponse{}, fmt.Errorf("bilibili api error: code=%d message=%s", out.Code, out.Message)
+	}
+	return out, nil
+}
+
+type UpVideosResponse struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func (c *Client) ListUpVideos(ctx context.Context, mid string, page int, pageSize int) (UpVideosResponse, error) {
+	mid = strings.TrimSpace(mid)
+	if mid == "" {
+		return UpVideosResponse{}, fmt.Errorf("empty mid")
+	}
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 30
+	}
+
+	var out UpVideosResponse
+	resp, err := c.httpClient.R().
+		SetContext(ctx).
+		SetQueryParams(map[string]string{
+			"mid": mid,
+			"pn":  strconv.Itoa(page),
+			"ps":  strconv.Itoa(pageSize),
+		}).
+		SetResult(&out).
+		Get("/x/space/arc/search")
+	if err != nil {
+		return UpVideosResponse{}, err
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return UpVideosResponse{}, crawler.NewHTTPStatusError("bilibili", "/x/space/arc/search", resp.StatusCode(), resp.String())
+	}
+	if out.Code != 0 {
+		return UpVideosResponse{}, fmt.Errorf("bilibili api error: code=%d message=%s", out.Code, out.Message)
 	}
 	return out, nil
 }

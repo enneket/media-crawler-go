@@ -34,8 +34,12 @@ func RequestFromConfig(cfg config.Config) Request {
 			out.Inputs = cfg.DouyinCreatorIdList
 		}
 	case "bilibili", "bili", "b站", "b":
-		out.Mode = ModeDetail
-		out.Inputs = cfg.BiliSpecifiedVideoUrls
+		switch mode {
+		case ModeDetail:
+			out.Inputs = cfg.BiliSpecifiedVideoUrls
+		case ModeCreator:
+			out.Inputs = cfg.BiliCreatorIdList
+		}
 	case "weibo", "wb", "微博":
 		switch mode {
 		case ModeDetail:

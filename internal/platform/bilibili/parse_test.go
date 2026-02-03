@@ -24,3 +24,24 @@ func TestParseVideoID(t *testing.T) {
 		}
 	}
 }
+
+func TestParseCreatorID(t *testing.T) {
+	tests := []struct {
+		in  string
+		mid string
+	}{
+		{"123456", "123456"},
+		{"https://space.bilibili.com/123456", "123456"},
+		{"https://space.bilibili.com/123456/", "123456"},
+		{"https://www.bilibili.com?mid=123456", "123456"},
+	}
+	for _, tt := range tests {
+		got, err := ParseCreatorID(tt.in)
+		if err != nil {
+			t.Fatalf("ParseCreatorID(%q) err: %v", tt.in, err)
+		}
+		if got != tt.mid {
+			t.Fatalf("ParseCreatorID(%q) mid=%q want=%q", tt.in, got, tt.mid)
+		}
+	}
+}

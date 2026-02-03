@@ -18,7 +18,7 @@ func (s *Server) handleConfigPlatforms(w http.ResponseWriter, r *http.Request) {
 		"platforms": []platformInfo{
 			{Key: "xhs", Label: "小红书", Modes: []string{"search", "detail", "creator"}},
 			{Key: "douyin", Label: "抖音", Modes: []string{"search", "detail", "creator"}},
-			{Key: "bilibili", Label: "Bilibili", Modes: []string{"detail"}},
+			{Key: "bilibili", Label: "Bilibili", Modes: []string{"search", "detail", "creator"}},
 			{Key: "weibo", Label: "微博", Modes: []string{"search", "detail", "creator"}},
 			{Key: "tieba", Label: "贴吧", Modes: []string{"detail"}},
 			{Key: "zhihu", Label: "知乎", Modes: []string{"detail"}},
@@ -33,6 +33,8 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 		"login_types":      []string{"qrcode", "phone", "cookie"},
 		"store_backends":   []string{"file", "sqlite"},
 		"save_data_option": []string{"json", "csv"},
+		"bili_search_mode": []string{"video"},
+		"wb_search_type":   []string{"1", "61", "60", "64"},
 		"defaults": map[string]any{
 			"platform":          config.AppConfig.Platform,
 			"crawler_type":      config.AppConfig.CrawlerType,
@@ -46,6 +48,8 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 			"enable_comments":   config.AppConfig.EnableGetComments,
 			"enable_subcomment": config.AppConfig.EnableGetSubComments,
 			"enable_medias":     config.AppConfig.EnableGetMedias,
+			"bili_search_mode":  config.AppConfig.BiliSearchMode,
+			"wb_search_type":    config.AppConfig.WBSearchType,
 		},
 	})
 }

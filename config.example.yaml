@@ -39,6 +39,11 @@ ENABLE_GET_MEDIAS: false
 # Bilibili (detail mode, optional)
 # BILI_SPECIFIED_VIDEO_URL_LIST:
 #   - "https://www.bilibili.com/video/BV1Q5411W7bH"
+# Bilibili (creator mode, optional)
+# BILI_CREATOR_ID_LIST:
+#   - "123456"
+# Bilibili (search mode, optional)
+# BILI_SEARCH_MODE: "video" # video
 # Weibo (detail mode, optional)
 # WB_SPECIFIED_NOTE_URL_LIST:
 #   - "https://m.weibo.cn/status/4KjD8oZ4D"

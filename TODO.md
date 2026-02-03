@@ -62,7 +62,7 @@
 - [x] WebSocket：日志流与状态流。
 
 ### 平台覆盖
-- [ ] 将 bilibili/tieba/zhihu/ks 从“detail 最小闭环”扩展到 search/creator（先补参数与落盘，再补分页/并发与风控；weibo 已补齐）。
+- [ ] 将 tieba/zhihu/ks 从“detail 最小闭环”扩展到 search/creator（先补参数与落盘，再补分页/并发与风控；weibo、bilibili 已补齐）。
 
 ### 存储/数据
 - [x] 输出目录可配置（DATA_DIR；同时影响 store 落盘与 /data API）。
@@ -81,5 +81,6 @@
 - [x] T-010 WebUI：静态资源托管 + 配置页 + 任务页（复用 T-008/T-009）。
 - [ ] T-011 扩展更多平台能力：bili/tieba/zhihu/ks 的 search/creator。
 - [x] T-011a 微博：search/creator（m.weibo.cn /api/container/getIndex + /statuses/show + creator profile）。
+- [x] T-011b bilibili：search/creator（搜索接口 + up 投稿列表 + view 详情保存）。
 - [ ] T-012 存储扩展：Excel（可选）与输出目录配置。
 - [ ] T-013 测试体系：可回放的 HTTP fixture（签名/接口解析稳定性）。

@@ -41,6 +41,7 @@ type RunRequest struct {
 	DouyinCreatorIdList     []string `json:"dy_creator_id_list,omitempty"`
 
 	BiliSpecifiedVideoUrls []string `json:"bili_specified_video_url_list,omitempty"`
+	BiliCreatorIdList      []string `json:"bili_creator_id_list,omitempty"`
 	WBSpecifiedNoteUrls    []string `json:"wb_specified_note_url_list,omitempty"`
 	WBCreatorIdList        []string `json:"wb_creator_id_list,omitempty"`
 
@@ -196,6 +197,9 @@ func applyRunRequestToConfig(cfg *config.Config, req RunRequest) {
 	if len(req.BiliSpecifiedVideoUrls) > 0 {
 		cfg.BiliSpecifiedVideoUrls = req.BiliSpecifiedVideoUrls
 	}
+	if len(req.BiliCreatorIdList) > 0 {
+		cfg.BiliCreatorIdList = req.BiliCreatorIdList
+	}
 	if len(req.WBSpecifiedNoteUrls) > 0 {
 		cfg.WBSpecifiedNoteUrls = req.WBSpecifiedNoteUrls
 	}
@@ -280,11 +284,21 @@ func validateRunConfig(cfg config.Config) error {
 			return ValidationError{Msg: fmt.Sprintf("unsupported crawler_type for douyin: %s", crawlerType)}
 		}
 	case "bilibili", "bili", "b站", "b":
-		if crawlerType != "detail" {
-			return ValidationError{Msg: "bilibili only supports crawler_type=detail"}
-		}
-		if len(cfg.BiliSpecifiedVideoUrls) == 0 {
-			return ValidationError{Msg: "bili_specified_video_url_list is required for detail"}
+		switch crawlerType {
+		case "search":
+			if strings.TrimSpace(cfg.Keywords) == "" {
+				return ValidationError{Msg: "keywords is required for search"}
+			}
+		case "detail":
+			if len(cfg.BiliSpecifiedVideoUrls) == 0 {
+				return ValidationError{Msg: "bili_specified_video_url_list is required for detail"}
+			}
+		case "creator":
+			if len(cfg.BiliCreatorIdList) == 0 {
+				return ValidationError{Msg: "bili_creator_id_list is required for creator"}
+			}
+		default:
+			return ValidationError{Msg: fmt.Sprintf("unsupported crawler_type for bilibili: %s", crawlerType)}
 		}
 	case "weibo", "wb", "微博":
 		switch crawlerType {

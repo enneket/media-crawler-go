@@ -11,6 +11,7 @@ import (
 var (
 	reBVID = regexp.MustCompile(`(?i)\bBV[0-9A-Za-z]{10}\b`)
 	reAID  = regexp.MustCompile(`(?i)\bav(\d+)\b`)
+	reMID  = regexp.MustCompile(`\b(\d{4,})\b`)
 )
 
 func ParseVideoID(input string) (bvid string, aid int64, noteID string, err error) {
@@ -76,4 +77,36 @@ func ParseVideoID(input string) (bvid string, aid int64, noteID string, err erro
 	}
 
 	return "", 0, "", fmt.Errorf("cannot parse bilibili video id from: %s", input)
+}
+
+func ParseCreatorID(input string) (mid string, err error) {
+	s := strings.TrimSpace(input)
+	if s == "" {
+		return "", fmt.Errorf("empty input")
+	}
+	if u, err := url.Parse(s); err == nil && u != nil && u.Host != "" {
+		if strings.Contains(u.Host, "bilibili.com") {
+			p := strings.Trim(u.Path, "/")
+			if strings.HasPrefix(p, "space.bilibili.com/") {
+				p = strings.TrimPrefix(p, "space.bilibili.com/")
+			}
+			if strings.HasPrefix(p, "space.bilibili.com") {
+				p = strings.TrimPrefix(p, "space.bilibili.com")
+				p = strings.Trim(p, "/")
+			}
+			if strings.HasPrefix(p, "space/") {
+				p = strings.TrimPrefix(p, "space/")
+			}
+			if strings.HasPrefix(p, "u/") {
+				p = strings.TrimPrefix(p, "u/")
+			}
+			if m := reMID.FindStringSubmatch(p); len(m) == 2 {
+				return m[1], nil
+			}
+		}
+	}
+	if m := reMID.FindStringSubmatch(s); len(m) == 2 {
+		return m[1], nil
+	}
+	return "", fmt.Errorf("cannot parse bilibili mid from: %s", input)
 }
