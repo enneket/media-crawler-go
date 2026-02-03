@@ -51,6 +51,7 @@ function buildRunPayload() {
   if (crawlerType === "creator") {
     if (platform === "xhs") payload.xhs_creator_id_list = creators;
     if (platform === "douyin") payload.dy_creator_id_list = creators;
+    if (platform === "weibo") payload.wb_creator_id_list = creators;
   }
 
   return payload;
@@ -144,11 +145,13 @@ async function loadPlatforms() {
   const select = el("platform");
   select.innerHTML = "";
   const platforms = ok && Array.isArray(data.platforms) ? data.platforms : [];
+  window.__platforms = {};
   for (const p of platforms) {
     const opt = document.createElement("option");
     opt.value = p.key;
     opt.textContent = `${p.key} - ${p.label}`;
     select.appendChild(opt);
+    window.__platforms[p.key] = p;
   }
   if (select.options.length > 0) {
     select.value = "xhs";
@@ -160,10 +163,35 @@ function bindEvents() {
     el("runPayload").textContent = pretty(buildRunPayload());
   };
 
+  const updateModeOptions = () => {
+    const platform = el("platform").value;
+    const p = (window.__platforms || {})[platform];
+    const allowed = p && Array.isArray(p.modes) ? p.modes : ["search", "detail", "creator"];
+    const select = el("crawlerType");
+    const current = select.value;
+    select.innerHTML = "";
+    for (const m of allowed) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      select.appendChild(opt);
+    }
+    if (allowed.includes(current)) {
+      select.value = current;
+    } else if (select.options.length > 0) {
+      select.value = select.options[0].value;
+    }
+  };
+
   for (const id of ["platform", "crawlerType", "keywords", "urls", "creators"]) {
     el(id).addEventListener("input", updatePayload);
     el(id).addEventListener("change", updatePayload);
   }
+
+  el("platform").addEventListener("change", () => {
+    updateModeOptions();
+    updatePayload();
+  });
 
   el("btnRun").onclick = async () => {
     const payload = buildRunPayload();
@@ -186,6 +214,7 @@ function bindEvents() {
   el("btnClearLogs").onclick = () => (el("logs").textContent = "");
 
   updatePayload();
+  updateModeOptions();
 }
 
 async function main() {
@@ -197,4 +226,3 @@ async function main() {
 }
 
 main();
-

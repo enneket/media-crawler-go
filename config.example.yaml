@@ -42,6 +42,11 @@ ENABLE_GET_MEDIAS: false
 # Weibo (detail mode, optional)
 # WB_SPECIFIED_NOTE_URL_LIST:
 #   - "https://m.weibo.cn/status/4KjD8oZ4D"
+# Weibo (creator mode, optional)
+# WB_CREATOR_ID_LIST:
+#   - "your_weibo_user_id"
+# Weibo (search mode, optional)
+# WB_SEARCH_TYPE: "1" # 1(default) | 61(real_time) | 60(popular) | 64(video)
 # Tieba (detail mode, optional)
 # TIEBA_SPECIFIED_NOTE_URL_LIST:
 #   - "https://tieba.baidu.com/p/123456"

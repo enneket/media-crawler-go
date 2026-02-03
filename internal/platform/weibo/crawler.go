@@ -8,6 +8,8 @@ import (
 	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/store"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,15 +30,21 @@ func (c *Crawler) Run(ctx context.Context, req crawler.Request) (crawler.Result,
 		req.Mode = crawler.ModeDetail
 	}
 	out := crawler.NewResult(req)
-	res, err := c.runDetail(ctx, req)
+	var res crawler.Result
+	var err error
+	switch req.Mode {
+	case crawler.ModeSearch:
+		res, err = c.runSearch(ctx, req)
+	case crawler.ModeCreator:
+		res, err = c.runCreator(ctx, req)
+	default:
+		res, err = c.runDetail(ctx, req)
+	}
 	res.StartedAt = out.StartedAt
 	return res, err
 }
 
 func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.Result, error) {
-	if req.Mode != crawler.ModeDetail {
-		return crawler.Result{}, fmt.Errorf("weibo only supports mode=detail for now")
-	}
 	inputs := req.Inputs
 	if len(inputs) == 0 {
 		inputs = config.AppConfig.WBSpecifiedNoteUrls
@@ -79,4 +87,287 @@ func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.R
 	out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, itemRes.FailureKinds)
 	out.FinishedAt = time.Now().Unix()
 	return out, nil
+}
+
+func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.Result, error) {
+	keywords := req.Keywords
+	if len(keywords) == 0 {
+		if v := strings.TrimSpace(config.AppConfig.Keywords); v != "" {
+			keywords = strings.Split(v, ",")
+		}
+	}
+	keywords = trimStrings(keywords)
+	if len(keywords) == 0 {
+		return crawler.Result{}, fmt.Errorf("empty keywords")
+	}
+
+	startPage := req.StartPage
+	if startPage <= 0 {
+		startPage = 1
+	}
+	maxNotes := req.MaxNotes
+	if maxNotes <= 0 {
+		maxNotes = 20
+	}
+	limit := req.Concurrency
+	if limit <= 0 {
+		limit = 1
+	}
+
+	searchType := strings.TrimSpace(config.AppConfig.WBSearchType)
+	if searchType == "" {
+		searchType = "1"
+	}
+
+	seen := map[string]struct{}{}
+	out := crawler.NewResult(req)
+
+	for _, kw := range keywords {
+		page := startPage
+		for out.Succeeded+out.Failed < maxNotes {
+			res, err := c.client.SearchByKeyword(ctx, kw, page, searchType)
+			if err != nil {
+				return out, err
+			}
+			var data map[string]any
+			if err := json.Unmarshal(res.Data, &data); err != nil {
+				return out, err
+			}
+			ids := extractNoteIDsFromIndex(data)
+			ids = filterNewIDs(ids, seen, maxNotes-(out.Succeeded+out.Failed))
+			if len(ids) == 0 {
+				break
+			}
+			itemRes := crawler.ForEachLimit(ctx, ids, limit, func(ctx context.Context, id string) error {
+				show, err := c.client.Show(ctx, id)
+				if err != nil {
+					return err
+				}
+				var v any
+				if err := json.Unmarshal(show.Data, &v); err != nil {
+					return err
+				}
+				return store.SaveNoteDetail(id, v)
+			})
+			out.Processed += itemRes.Processed
+			out.Succeeded += itemRes.Succeeded
+			out.Failed += itemRes.Failed
+			out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, itemRes.FailureKinds)
+			page++
+			sleepSec := config.AppConfig.CrawlerMaxSleepSec
+			if sleepSec > 0 {
+				select {
+				case <-ctx.Done():
+					return out, ctx.Err()
+				case <-time.After(time.Duration(sleepSec) * time.Second):
+				}
+			}
+		}
+	}
+
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
+}
+
+func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.Result, error) {
+	inputs := req.Inputs
+	if len(inputs) == 0 {
+		inputs = config.AppConfig.WBCreatorIdList
+	}
+	inputs = trimStrings(inputs)
+	if len(inputs) == 0 {
+		return crawler.Result{}, fmt.Errorf("empty inputs (WB_CREATOR_ID_LIST)")
+	}
+
+	maxNotes := req.MaxNotes
+	if maxNotes <= 0 {
+		maxNotes = 50
+	}
+	limit := req.Concurrency
+	if limit <= 0 {
+		limit = 1
+	}
+
+	out := crawler.NewResult(req)
+	logger.Info("weibo creator start", "creators", len(inputs))
+
+	for _, creatorID := range inputs {
+		info, err := c.client.CreatorInfo(ctx, creatorID)
+		if err != nil {
+			return out, err
+		}
+		var infoData map[string]any
+		if err := json.Unmarshal(info.Data, &infoData); err != nil {
+			return out, err
+		}
+		profile := any(infoData)
+		if ui, ok := infoData["userInfo"]; ok {
+			profile = ui
+		}
+		if err := store.SaveCreatorProfile(creatorID, profile); err != nil {
+			return out, err
+		}
+
+		containerID := "107603" + creatorID
+		sinceID := "0"
+		seen := map[string]struct{}{}
+
+		for out.Succeeded+out.Failed < maxNotes {
+			res, err := c.client.NotesByCreator(ctx, creatorID, containerID, sinceID)
+			if err != nil {
+				return out, err
+			}
+			var data map[string]any
+			if err := json.Unmarshal(res.Data, &data); err != nil {
+				return out, err
+			}
+			sinceID = extractSinceID(data)
+
+			ids := extractNoteIDsFromIndex(data)
+			ids = filterNewIDs(ids, seen, maxNotes-(out.Succeeded+out.Failed))
+			if len(ids) == 0 {
+				break
+			}
+			itemRes := crawler.ForEachLimit(ctx, ids, limit, func(ctx context.Context, id string) error {
+				show, err := c.client.Show(ctx, id)
+				if err != nil {
+					return err
+				}
+				var v any
+				if err := json.Unmarshal(show.Data, &v); err != nil {
+					return err
+				}
+				return store.SaveNoteDetail(id, v)
+			})
+			out.Processed += itemRes.Processed
+			out.Succeeded += itemRes.Succeeded
+			out.Failed += itemRes.Failed
+			out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, itemRes.FailureKinds)
+
+			if sinceID == "" || sinceID == "0" {
+				break
+			}
+			sleepSec := config.AppConfig.CrawlerMaxSleepSec
+			if sleepSec > 0 {
+				select {
+				case <-ctx.Done():
+					return out, ctx.Err()
+				case <-time.After(time.Duration(sleepSec) * time.Second):
+				}
+			}
+		}
+	}
+
+	out.FinishedAt = time.Now().Unix()
+	return out, nil
+}
+
+func trimStrings(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, v := range in {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+func extractSinceID(data map[string]any) string {
+	cardlistInfo, ok := data["cardlistInfo"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	v, ok := cardlistInfo["since_id"]
+	if !ok || v == nil {
+		return ""
+	}
+	switch vv := v.(type) {
+	case string:
+		return strings.TrimSpace(vv)
+	case float64:
+		return strconv.FormatInt(int64(vv), 10)
+	default:
+		return fmt.Sprintf("%v", vv)
+	}
+}
+
+func extractNoteIDsFromIndex(data map[string]any) []string {
+	cards, ok := data["cards"].([]any)
+	if !ok || len(cards) == 0 {
+		return nil
+	}
+	out := make([]string, 0, 32)
+	for _, it := range cards {
+		m, ok := it.(map[string]any)
+		if !ok {
+			continue
+		}
+		out = append(out, extractNoteIDsFromCard(m)...)
+		if cg, ok := m["card_group"].([]any); ok {
+			for _, git := range cg {
+				gm, ok := git.(map[string]any)
+				if !ok {
+					continue
+				}
+				out = append(out, extractNoteIDsFromCard(gm)...)
+			}
+		}
+	}
+	return trimStrings(out)
+}
+
+func extractNoteIDsFromCard(card map[string]any) []string {
+	ct, ok := card["card_type"]
+	if !ok {
+		return nil
+	}
+	if toInt(ct) != 9 {
+		return nil
+	}
+	mblog, ok := card["mblog"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	id, ok := mblog["id"]
+	if !ok || id == nil {
+		return nil
+	}
+	return []string{fmt.Sprintf("%v", id)}
+}
+
+func toInt(v any) int {
+	switch vv := v.(type) {
+	case int:
+		return vv
+	case int64:
+		return int(vv)
+	case float64:
+		return int(vv)
+	case string:
+		n, _ := strconv.Atoi(strings.TrimSpace(vv))
+		return n
+	default:
+		return 0
+	}
+}
+
+func filterNewIDs(ids []string, seen map[string]struct{}, limit int) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+		if limit > 0 && len(out) >= limit {
+			break
+		}
+	}
+	return out
 }

@@ -19,7 +19,7 @@ func (s *Server) handleConfigPlatforms(w http.ResponseWriter, r *http.Request) {
 			{Key: "xhs", Label: "小红书", Modes: []string{"search", "detail", "creator"}},
 			{Key: "douyin", Label: "抖音", Modes: []string{"search", "detail", "creator"}},
 			{Key: "bilibili", Label: "Bilibili", Modes: []string{"detail"}},
-			{Key: "weibo", Label: "微博", Modes: []string{"detail"}},
+			{Key: "weibo", Label: "微博", Modes: []string{"search", "detail", "creator"}},
 			{Key: "tieba", Label: "贴吧", Modes: []string{"detail"}},
 			{Key: "zhihu", Label: "知乎", Modes: []string{"detail"}},
 			{Key: "kuaishou", Label: "快手", Modes: []string{"detail"}},
@@ -58,4 +58,3 @@ func (s *Server) handleEnvCheck(w http.ResponseWriter, r *http.Request) {
 		"go_version": runtime.Version(),
 	})
 }
-

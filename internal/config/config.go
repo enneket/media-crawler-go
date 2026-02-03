@@ -59,6 +59,8 @@ type Config struct {
 
 	// Weibo Specific
 	WBSpecifiedNoteUrls []string `mapstructure:"WB_SPECIFIED_NOTE_URL_LIST"`
+	WBCreatorIdList     []string `mapstructure:"WB_CREATOR_ID_LIST"`
+	WBSearchType        string   `mapstructure:"WB_SEARCH_TYPE"`
 
 	// Tieba Specific
 	TiebaSpecifiedNoteUrls []string `mapstructure:"TIEBA_SPECIFIED_NOTE_URL_LIST"`
@@ -116,6 +118,8 @@ func LoadConfig(path string) error {
 	viper.SetDefault("TIEBA_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("ZHIHU_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("KS_SPECIFIED_NOTE_URL_LIST", []string{})
+	viper.SetDefault("WB_CREATOR_ID_LIST", []string{})
+	viper.SetDefault("WB_SEARCH_TYPE", "1")
 
 	viper.SetEnvPrefix("MEDIA_CRAWLER")
 	viper.AutomaticEnv()

@@ -37,8 +37,12 @@ func RequestFromConfig(cfg config.Config) Request {
 		out.Mode = ModeDetail
 		out.Inputs = cfg.BiliSpecifiedVideoUrls
 	case "weibo", "wb", "微博":
-		out.Mode = ModeDetail
-		out.Inputs = cfg.WBSpecifiedNoteUrls
+		switch mode {
+		case ModeDetail:
+			out.Inputs = cfg.WBSpecifiedNoteUrls
+		case ModeCreator:
+			out.Inputs = cfg.WBCreatorIdList
+		}
 	case "tieba", "tb", "贴吧":
 		out.Mode = ModeDetail
 		out.Inputs = cfg.TiebaSpecifiedNoteUrls

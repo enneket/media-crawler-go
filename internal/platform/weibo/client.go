@@ -91,3 +91,82 @@ func (c *Client) Show(ctx context.Context, id string) (ShowResponse, error) {
 	}
 	return out, nil
 }
+
+type GetIndexResponse struct {
+	Ok   int             `json:"ok"`
+	Data json.RawMessage `json:"data"`
+}
+
+func (c *Client) GetIndex(ctx context.Context, params map[string]string) (GetIndexResponse, error) {
+	var out GetIndexResponse
+	req := c.httpClient.R().SetContext(ctx).SetResult(&out)
+	for k, v := range params {
+		req.SetQueryParam(k, v)
+	}
+	resp, err := req.Get("/api/container/getIndex")
+	if err != nil {
+		return GetIndexResponse{}, err
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return GetIndexResponse{}, crawler.NewHTTPStatusError("weibo", "/api/container/getIndex", resp.StatusCode(), resp.String())
+	}
+	if out.Ok != 1 {
+		return GetIndexResponse{}, fmt.Errorf("weibo api not ok: ok=%d", out.Ok)
+	}
+	return out, nil
+}
+
+func (c *Client) SearchByKeyword(ctx context.Context, keyword string, page int, searchType string) (GetIndexResponse, error) {
+	keyword = strings.TrimSpace(keyword)
+	if keyword == "" {
+		return GetIndexResponse{}, fmt.Errorf("empty keyword")
+	}
+	if page <= 0 {
+		page = 1
+	}
+	searchType = strings.TrimSpace(searchType)
+	if searchType == "" {
+		searchType = "1"
+	}
+	containerid := fmt.Sprintf("100103type=%s&q=%s", searchType, keyword)
+	return c.GetIndex(ctx, map[string]string{
+		"containerid": containerid,
+		"page_type":   "searchall",
+		"page":        fmt.Sprintf("%d", page),
+	})
+}
+
+func (c *Client) CreatorInfo(ctx context.Context, creatorID string) (GetIndexResponse, error) {
+	creatorID = strings.TrimSpace(creatorID)
+	if creatorID == "" {
+		return GetIndexResponse{}, fmt.Errorf("empty creator id")
+	}
+	containerid := fmt.Sprintf("100505%s", creatorID)
+	return c.GetIndex(ctx, map[string]string{
+		"jumpfrom":    "weibocom",
+		"type":        "uid",
+		"value":       creatorID,
+		"containerid": containerid,
+	})
+}
+
+func (c *Client) NotesByCreator(ctx context.Context, creatorID string, containerID string, sinceID string) (GetIndexResponse, error) {
+	creatorID = strings.TrimSpace(creatorID)
+	if creatorID == "" {
+		return GetIndexResponse{}, fmt.Errorf("empty creator id")
+	}
+	containerID = strings.TrimSpace(containerID)
+	if containerID == "" {
+		return GetIndexResponse{}, fmt.Errorf("empty container id")
+	}
+	if strings.TrimSpace(sinceID) == "" {
+		sinceID = "0"
+	}
+	return c.GetIndex(ctx, map[string]string{
+		"jumpfrom":    "weibocom",
+		"type":        "uid",
+		"value":       creatorID,
+		"containerid": containerID,
+		"since_id":    sinceID,
+	})
+}

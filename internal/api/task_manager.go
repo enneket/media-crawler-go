@@ -42,6 +42,7 @@ type RunRequest struct {
 
 	BiliSpecifiedVideoUrls []string `json:"bili_specified_video_url_list,omitempty"`
 	WBSpecifiedNoteUrls    []string `json:"wb_specified_note_url_list,omitempty"`
+	WBCreatorIdList        []string `json:"wb_creator_id_list,omitempty"`
 
 	TiebaSpecifiedNoteUrls []string `json:"tieba_specified_note_url_list,omitempty"`
 	ZhihuSpecifiedNoteUrls []string `json:"zhihu_specified_note_url_list,omitempty"`
@@ -198,6 +199,9 @@ func applyRunRequestToConfig(cfg *config.Config, req RunRequest) {
 	if len(req.WBSpecifiedNoteUrls) > 0 {
 		cfg.WBSpecifiedNoteUrls = req.WBSpecifiedNoteUrls
 	}
+	if len(req.WBCreatorIdList) > 0 {
+		cfg.WBCreatorIdList = req.WBCreatorIdList
+	}
 	if len(req.TiebaSpecifiedNoteUrls) > 0 {
 		cfg.TiebaSpecifiedNoteUrls = req.TiebaSpecifiedNoteUrls
 	}
@@ -283,11 +287,21 @@ func validateRunConfig(cfg config.Config) error {
 			return ValidationError{Msg: "bili_specified_video_url_list is required for detail"}
 		}
 	case "weibo", "wb", "微博":
-		if crawlerType != "detail" {
-			return ValidationError{Msg: "weibo only supports crawler_type=detail"}
-		}
-		if len(cfg.WBSpecifiedNoteUrls) == 0 {
-			return ValidationError{Msg: "wb_specified_note_url_list is required for detail"}
+		switch crawlerType {
+		case "search":
+			if strings.TrimSpace(cfg.Keywords) == "" {
+				return ValidationError{Msg: "keywords is required for search"}
+			}
+		case "detail":
+			if len(cfg.WBSpecifiedNoteUrls) == 0 {
+				return ValidationError{Msg: "wb_specified_note_url_list is required for detail"}
+			}
+		case "creator":
+			if len(cfg.WBCreatorIdList) == 0 {
+				return ValidationError{Msg: "wb_creator_id_list is required for creator"}
+			}
+		default:
+			return ValidationError{Msg: fmt.Sprintf("unsupported crawler_type for weibo: %s", crawlerType)}
 		}
 	case "tieba", "tb", "贴吧":
 		if crawlerType != "detail" {
