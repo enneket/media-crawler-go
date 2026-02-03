@@ -125,6 +125,15 @@ function appendLogLine(line) {
   }
 }
 
+  async function loadRecentLogs() {
+    const { ok, data } = await getJSON("/logs?limit=200");
+    if (!ok) return;
+    const items = data && Array.isArray(data.logs) ? data.logs : [];
+    for (const it of items) {
+      appendLogLine(`${JSON.stringify(it)}\n`);
+    }
+  }
+
 function connectLogs() {
   const ws = new WebSocket(wsURL("/ws/logs"));
   ws.onmessage = (ev) => appendLogLine(ev.data);
@@ -237,6 +246,7 @@ function bindEvents() {
 async function main() {
   await loadPlatforms();
   bindEvents();
+    await loadRecentLogs();
   connectLogs();
   connectStatus();
   await refreshDataFiles();

@@ -11,8 +11,7 @@ import (
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/proxy"
 	"media-crawler-go/internal/store"
-	"os"
-	"path/filepath"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -27,8 +26,10 @@ type DouyinCrawler struct {
 	signer  *Signer
 
 	cdpBrowser playwright.Browser
+	cdpCmd     *exec.Cmd
 
 	proxyPool *proxy.Pool
+	cleanupUD func()
 }
 
 func NewCrawler() *DouyinCrawler {
@@ -106,17 +107,11 @@ func (c *DouyinCrawler) initBrowser(ctx context.Context) error {
 	}
 	c.pw = pw
 
-	userDataDir := config.AppConfig.UserDataDir
-	if userDataDir == "" {
-		userDataDir = "browser_data/douyin"
-	}
-	absDir, err := filepath.Abs(userDataDir)
+	absDir, cleanup, err := browser.PrepareUserDataDir(config.AppConfig.UserDataDir, config.AppConfig.SaveLoginState, "douyin")
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare user data dir: %v", err)
 	}
-	if err := os.MkdirAll(absDir, 0755); err != nil {
-		return err
-	}
+	c.cleanupUD = cleanup
 
 	if config.AppConfig.EnableCDPMode {
 		timeoutSec := config.AppConfig.BrowserLaunchTimeout
@@ -131,6 +126,7 @@ func (c *DouyinCrawler) initBrowser(ctx context.Context) error {
 			LaunchTimeout:     time.Duration(timeoutSec) * time.Second,
 		})
 		if err == nil {
+			c.cdpCmd = sess.Cmd
 			c.cdpBrowser = sess.Browser
 			c.browser = sess.Context
 			c.page = sess.Page
@@ -177,8 +173,14 @@ func (c *DouyinCrawler) close() {
 	if c.cdpBrowser != nil {
 		_ = c.cdpBrowser.Close()
 	}
+	if c.cdpCmd != nil && c.cdpCmd.Process != nil && config.AppConfig.AutoCloseBrowser {
+		_ = c.cdpCmd.Process.Kill()
+	}
 	if c.pw != nil {
 		_ = c.pw.Stop()
+	}
+	if c.cleanupUD != nil {
+		c.cleanupUD()
 	}
 }
 

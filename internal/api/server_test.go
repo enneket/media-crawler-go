@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
+	"media-crawler-go/internal/logger"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -168,4 +169,39 @@ func TestTaskManagerRunConflict(t *testing.T) {
 		t.Fatalf("expected conflict error")
 	}
 	close(block)
+}
+
+func TestServerLogsEndpoint(t *testing.T) {
+	config.AppConfig = config.Config{LogLevel: "info", LogFormat: "json"}
+	logger.InitFromConfig()
+	logger.Info("unit-test-logs-endpoint", "k", "v")
+
+	srv := NewServer(NewTaskManagerWithRunner(func(ctx context.Context) (crawler.Result, error) {
+		return crawler.Result{}, nil
+	}))
+
+	for _, path := range []string{"/logs?limit=2000", "/crawler/logs?limit=2000"} {
+		r := httptest.NewRequest(http.MethodGet, path, nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("logs code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp struct {
+			Logs []map[string]any `json:"logs"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal logs err: %v body=%s", err, w.Body.String())
+		}
+		found := false
+		for _, it := range resp.Logs {
+			if it["msg"] == "unit-test-logs-endpoint" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("expected log not found for path=%s, got=%d logs", path, len(resp.Logs))
+		}
+	}
 }

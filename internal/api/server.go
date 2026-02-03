@@ -38,6 +38,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /status", s.handleStatus)
 	s.mux.HandleFunc("POST /run", s.handleRun)
 	s.mux.HandleFunc("POST /stop", s.handleStop)
+	s.mux.HandleFunc("GET /logs", s.handleLogs)
+	s.mux.HandleFunc("GET /crawler/logs", s.handleLogs)
 	s.mux.HandleFunc("GET /config/platforms", s.handleConfigPlatforms)
 	s.mux.HandleFunc("GET /config/options", s.handleConfigOptions)
 	s.mux.HandleFunc("GET /env/check", s.handleEnvCheck)

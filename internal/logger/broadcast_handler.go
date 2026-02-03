@@ -26,9 +26,6 @@ func (h *BroadcastHandler) Enabled(ctx context.Context, level slog.Level) bool {
 
 func (h *BroadcastHandler) Handle(ctx context.Context, r slog.Record) error {
 	err := h.next.Handle(ctx, r)
-	if defaultBus.count() == 0 {
-		return err
-	}
 
 	evt := map[string]any{
 		"time":  formatTime(r.Time),
@@ -45,11 +42,19 @@ func (h *BroadcastHandler) Handle(ctx context.Context, r slog.Record) error {
 		return true
 	})
 	evt["attrs"] = attrs
+	addEvent(Event{
+		Time:  evt["time"].(string),
+		Level: evt["level"].(string),
+		Msg:   evt["msg"].(string),
+		Attrs: attrs,
+	})
 
-	b, mErr := json.Marshal(evt)
-	if mErr == nil {
-		b = append(b, '\n')
-		defaultBus.publish(b)
+	if defaultBus.count() > 0 {
+		b, mErr := json.Marshal(evt)
+		if mErr == nil {
+			b = append(b, '\n')
+			defaultBus.publish(b)
+		}
 	}
 	return err
 }

@@ -10,9 +10,7 @@ import (
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/proxy"
 	"media-crawler-go/internal/store"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,6 +27,7 @@ type XhsCrawler struct {
 	cdpCmd     *exec.Cmd
 	proxyPool  *proxy.Pool
 	proxy      *proxy.Proxy
+	cleanupUD  func()
 }
 
 func NewCrawler() *XhsCrawler {
@@ -685,16 +684,11 @@ func (c *XhsCrawler) initBrowser() error {
 	}
 	c.pw = pw
 
-	userDataDir, err := filepath.Abs(config.AppConfig.UserDataDir)
+	userDataDir, cleanup, err := browser.PrepareUserDataDir(config.AppConfig.UserDataDir, config.AppConfig.SaveLoginState, "xhs")
 	if err != nil {
-		return fmt.Errorf("could not resolve absolute path for user data dir: %v", err)
+		return fmt.Errorf("prepare user data dir: %v", err)
 	}
-
-	if _, err := os.Stat(userDataDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(userDataDir, 0755); err != nil {
-			return fmt.Errorf("could not create user data dir: %v", err)
-		}
-	}
+	c.cleanupUD = cleanup
 
 	if config.AppConfig.EnableCDPMode {
 		timeoutSec := config.AppConfig.BrowserLaunchTimeout
@@ -795,5 +789,8 @@ func (c *XhsCrawler) close() {
 	}
 	if c.pw != nil {
 		c.pw.Stop()
+	}
+	if c.cleanupUD != nil {
+		c.cleanupUD()
 	}
 }

@@ -6,7 +6,7 @@ LOGIN_WAIT_TIMEOUT_SEC: 120
 # Output
 DATA_DIR: "data"
 # Storage
-STORE_BACKEND: "file" # file | sqlite
+STORE_BACKEND: "file" # file | sqlite | mysql | postgres
 SQLITE_PATH: "data/media_crawler.db"
 # Logging
 LOG_LEVEL: "info" # debug | info | warn | error

@@ -128,6 +128,7 @@ func LoadConfig(path string) error {
 	viper.SetDefault("BROWSER_LAUNCH_TIMEOUT", 60)
 	viper.SetDefault("AUTO_CLOSE_BROWSER", true)
 	viper.SetDefault("SAVE_DATA_OPTION", "json")
+	viper.SetDefault("USER_DATA_DIR", "browser_data")
 	viper.SetDefault("START_PAGE", 1)
 	viper.SetDefault("CRAWLER_MAX_NOTES_COUNT", 15)
 	viper.SetDefault("MAX_CONCURRENCY_NUM", 1)
