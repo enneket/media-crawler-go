@@ -70,9 +70,11 @@ type Config struct {
 
 	// Zhihu Specific
 	ZhihuSpecifiedNoteUrls []string `mapstructure:"ZHIHU_SPECIFIED_NOTE_URL_LIST"`
+	ZhihuCreatorUrlList    []string `mapstructure:"ZHIHU_CREATOR_URL_LIST"`
 
 	// Kuaishou Specific
 	KuaishouSpecifiedNoteUrls []string `mapstructure:"KS_SPECIFIED_NOTE_URL_LIST"`
+	KuaishouCreatorUrlList    []string `mapstructure:"KS_CREATOR_URL_LIST"`
 }
 
 var AppConfig Config
@@ -123,7 +125,9 @@ func LoadConfig(path string) error {
 	viper.SetDefault("TIEBA_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("TIEBA_CREATOR_URL_LIST", []string{})
 	viper.SetDefault("ZHIHU_SPECIFIED_NOTE_URL_LIST", []string{})
+	viper.SetDefault("ZHIHU_CREATOR_URL_LIST", []string{})
 	viper.SetDefault("KS_SPECIFIED_NOTE_URL_LIST", []string{})
+	viper.SetDefault("KS_CREATOR_URL_LIST", []string{})
 	viper.SetDefault("WB_CREATOR_ID_LIST", []string{})
 	viper.SetDefault("WB_SEARCH_TYPE", "1")
 

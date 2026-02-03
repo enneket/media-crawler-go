@@ -36,7 +36,7 @@
 
 ## 进行中（Go）
 - [x] 平台编排抽象：internal/crawler + platform registry 统一分发（Runner/Request/Result）。
-- [ ] 更完善的错误处理：统一重试/限速/风控提示与可观测性（日志/metrics；已具备 risk_hint + failure_kinds 统计，且 403/429 分别归类 forbidden/rate_limited）。
+- [x] 更完善的错误处理：统一重试/限速/风控提示与可观测性（日志/metrics；已具备 risk_hint + failure_kinds 统计，且 403/429 分别归类 forbidden/rate_limited）。
 - [x] HTTP 错误结构化：统一用 crawler.NewHTTPStatusError 封装状态码与 body snippet，便于分类统计与告警。
 
 ## 待转写（P0，高优先）
@@ -62,7 +62,7 @@
 - [x] WebSocket：日志流与状态流。
 
 ### 平台覆盖
-- [ ] 将 zhihu/ks 从“detail 最小闭环”扩展到 search/creator（先补参数与落盘，再补分页/并发与风控；weibo、bilibili、tieba 已补齐）。
+- [x] 将 zhihu/ks 从“detail 最小闭环”扩展到 search/creator（先补参数与落盘，再补分页/并发与风控；weibo、bilibili、tieba 已补齐）。
 
 ### 存储/数据
 - [x] 输出目录可配置（DATA_DIR；同时影响 store 落盘与 /data API）。
@@ -79,7 +79,7 @@
 - [x] T-008 增加 Data API：/data/files、/data/files/{path} 预览、/data/download、/data/stats。
 - [x] T-009 WebSocket：/ws/logs、/ws/status（内置任务执行器直接推送，无需子进程）。
 - [x] T-010 WebUI：静态资源托管 + 配置页 + 任务页（复用 T-008/T-009）。
-- [ ] T-011 扩展更多平台能力：bili/tieba/zhihu/ks 的 search/creator。
+- [x] T-011 扩展更多平台能力：bili/tieba/zhihu/ks 的 search/creator。
 - [x] T-011a 微博：search/creator（m.weibo.cn /api/container/getIndex + /statuses/show + creator profile）。
 - [x] T-011b bilibili：search/creator（搜索接口 + up 投稿列表 + view 详情保存）。
 - [x] T-011c tieba：search/creator（/f/search/res 抓列表 + /home/main 抓用户帖子列表 + 归档详情页）。

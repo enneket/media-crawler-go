@@ -24,3 +24,31 @@ func TestParseKSID(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractDetailURLsFromHTML(t *testing.T) {
+	html := `
+<a href="/short-video/abc123">x</a>
+<a href="/photo/xyz_9">y</a>
+<a href="https://www.kuaishou.com/short-video/abc123">dup</a>
+`
+	got := ExtractDetailURLsFromHTML(html, 10)
+	if len(got) != 2 {
+		t.Fatalf("got=%v", got)
+	}
+	if got[0] != "https://www.kuaishou.com/short-video/abc123" {
+		t.Fatalf("first=%s", got[0])
+	}
+	if got[1] != "https://www.kuaishou.com/photo/xyz_9" {
+		t.Fatalf("second=%s", got[1])
+	}
+}
+
+func TestParseKSCreatorID(t *testing.T) {
+	id, err := ParseKSCreatorID("https://www.kuaishou.com/profile/user_1")
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if id != "user_1" {
+		t.Fatalf("id=%s", id)
+	}
+}

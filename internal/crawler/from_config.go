@@ -55,11 +55,19 @@ func RequestFromConfig(cfg config.Config) Request {
 			out.Inputs = cfg.TiebaCreatorUrlList
 		}
 	case "zhihu", "zh", "知乎":
-		out.Mode = ModeDetail
-		out.Inputs = cfg.ZhihuSpecifiedNoteUrls
+		switch mode {
+		case ModeDetail:
+			out.Inputs = cfg.ZhihuSpecifiedNoteUrls
+		case ModeCreator:
+			out.Inputs = cfg.ZhihuCreatorUrlList
+		}
 	case "kuaishou", "ks", "快手":
-		out.Mode = ModeDetail
-		out.Inputs = cfg.KuaishouSpecifiedNoteUrls
+		switch mode {
+		case ModeDetail:
+			out.Inputs = cfg.KuaishouSpecifiedNoteUrls
+		case ModeCreator:
+			out.Inputs = cfg.KuaishouCreatorUrlList
+		}
 	}
 
 	return out

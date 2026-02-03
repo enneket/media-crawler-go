@@ -21,8 +21,8 @@ func (s *Server) handleConfigPlatforms(w http.ResponseWriter, r *http.Request) {
 			{Key: "bilibili", Label: "Bilibili", Modes: []string{"search", "detail", "creator"}},
 			{Key: "weibo", Label: "微博", Modes: []string{"search", "detail", "creator"}},
 			{Key: "tieba", Label: "贴吧", Modes: []string{"search", "detail", "creator"}},
-			{Key: "zhihu", Label: "知乎", Modes: []string{"detail"}},
-			{Key: "kuaishou", Label: "快手", Modes: []string{"detail"}},
+			{Key: "zhihu", Label: "知乎", Modes: []string{"search", "detail", "creator"}},
+			{Key: "kuaishou", Label: "快手", Modes: []string{"search", "detail", "creator"}},
 		},
 	})
 }

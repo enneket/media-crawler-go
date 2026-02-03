@@ -54,6 +54,8 @@ function buildRunPayload() {
     if (platform === "weibo") payload.wb_creator_id_list = creators;
     if (platform === "bilibili") payload.bili_creator_id_list = creators;
     if (platform === "tieba") payload.tieba_creator_url_list = creators;
+    if (platform === "zhihu") payload.zhihu_creator_url_list = creators;
+    if (platform === "kuaishou") payload.ks_creator_url_list = creators;
   }
 
   return payload;

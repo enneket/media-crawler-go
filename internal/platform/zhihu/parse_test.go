@@ -25,3 +25,25 @@ func TestParseZhihuID(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractDetailURLsFromHTML(t *testing.T) {
+	html := `
+<a href="/question/123">q</a>
+<a href="/question/123/answer/456">a</a>
+<a href="https://www.zhihu.com/question/789/answer/111">b</a>
+<a href="https://www.zhihu.com/question/789">c</a>
+`
+	got := ExtractDetailURLsFromHTML(html, 10)
+	if len(got) < 3 {
+		t.Fatalf("got=%v", got)
+	}
+	if got[0] != "https://www.zhihu.com/question/123" {
+		t.Fatalf("first=%s", got[0])
+	}
+	if got[1] != "https://www.zhihu.com/question/123/answer/456" {
+		t.Fatalf("second=%s", got[1])
+	}
+	if got[2] != "https://www.zhihu.com/question/789/answer/111" {
+		t.Fatalf("third=%s", got[2])
+	}
+}

@@ -48,7 +48,9 @@ type RunRequest struct {
 	TiebaSpecifiedNoteUrls []string `json:"tieba_specified_note_url_list,omitempty"`
 	TiebaCreatorUrlList    []string `json:"tieba_creator_url_list,omitempty"`
 	ZhihuSpecifiedNoteUrls []string `json:"zhihu_specified_note_url_list,omitempty"`
+	ZhihuCreatorUrlList    []string `json:"zhihu_creator_url_list,omitempty"`
 	KSSpecifiedNoteUrls    []string `json:"ks_specified_note_url_list,omitempty"`
+	KSCreatorUrlList       []string `json:"ks_creator_url_list,omitempty"`
 
 	StoreBackend   string `json:"store_backend,omitempty"`
 	SQLitePath     string `json:"sqlite_path,omitempty"`
@@ -216,8 +218,14 @@ func applyRunRequestToConfig(cfg *config.Config, req RunRequest) {
 	if len(req.ZhihuSpecifiedNoteUrls) > 0 {
 		cfg.ZhihuSpecifiedNoteUrls = req.ZhihuSpecifiedNoteUrls
 	}
+	if len(req.ZhihuCreatorUrlList) > 0 {
+		cfg.ZhihuCreatorUrlList = req.ZhihuCreatorUrlList
+	}
 	if len(req.KSSpecifiedNoteUrls) > 0 {
 		cfg.KuaishouSpecifiedNoteUrls = req.KSSpecifiedNoteUrls
+	}
+	if len(req.KSCreatorUrlList) > 0 {
+		cfg.KuaishouCreatorUrlList = req.KSCreatorUrlList
 	}
 	if v := strings.TrimSpace(req.StoreBackend); v != "" {
 		cfg.StoreBackend = v
@@ -339,18 +347,38 @@ func validateRunConfig(cfg config.Config) error {
 			return ValidationError{Msg: fmt.Sprintf("unsupported crawler_type for tieba: %s", crawlerType)}
 		}
 	case "zhihu", "zh", "知乎":
-		if crawlerType != "detail" {
-			return ValidationError{Msg: "zhihu only supports crawler_type=detail"}
-		}
-		if len(cfg.ZhihuSpecifiedNoteUrls) == 0 {
-			return ValidationError{Msg: "zhihu_specified_note_url_list is required for detail"}
+		switch crawlerType {
+		case "search":
+			if strings.TrimSpace(cfg.Keywords) == "" {
+				return ValidationError{Msg: "keywords is required for search"}
+			}
+		case "detail":
+			if len(cfg.ZhihuSpecifiedNoteUrls) == 0 {
+				return ValidationError{Msg: "zhihu_specified_note_url_list is required for detail"}
+			}
+		case "creator":
+			if len(cfg.ZhihuCreatorUrlList) == 0 {
+				return ValidationError{Msg: "zhihu_creator_url_list is required for creator"}
+			}
+		default:
+			return ValidationError{Msg: fmt.Sprintf("unsupported crawler_type for zhihu: %s", crawlerType)}
 		}
 	case "kuaishou", "ks", "快手":
-		if crawlerType != "detail" {
-			return ValidationError{Msg: "kuaishou only supports crawler_type=detail"}
-		}
-		if len(cfg.KuaishouSpecifiedNoteUrls) == 0 {
-			return ValidationError{Msg: "ks_specified_note_url_list is required for detail"}
+		switch crawlerType {
+		case "search":
+			if strings.TrimSpace(cfg.Keywords) == "" {
+				return ValidationError{Msg: "keywords is required for search"}
+			}
+		case "detail":
+			if len(cfg.KuaishouSpecifiedNoteUrls) == 0 {
+				return ValidationError{Msg: "ks_specified_note_url_list is required for detail"}
+			}
+		case "creator":
+			if len(cfg.KuaishouCreatorUrlList) == 0 {
+				return ValidationError{Msg: "ks_creator_url_list is required for creator"}
+			}
+		default:
+			return ValidationError{Msg: fmt.Sprintf("unsupported crawler_type for kuaishou: %s", crawlerType)}
 		}
 	default:
 		if crawlerType == "search" && strings.TrimSpace(cfg.Keywords) == "" {
