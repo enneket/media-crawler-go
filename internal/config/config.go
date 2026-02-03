@@ -19,6 +19,8 @@ type Config struct {
 	SQLitePath           string `mapstructure:"SQLITE_PATH"`
 	MySQLDSN             string `mapstructure:"MYSQL_DSN"`
 	PostgresDSN          string `mapstructure:"POSTGRES_DSN"`
+	MongoURI             string `mapstructure:"MONGO_URI"`
+	MongoDB              string `mapstructure:"MONGO_DB"`
 	CacheBackend         string `mapstructure:"CACHE_BACKEND"`
 	CacheDefaultTTLSec   int    `mapstructure:"CACHE_DEFAULT_TTL_SEC"`
 	RedisAddr            string `mapstructure:"REDIS_ADDR"`
@@ -104,6 +106,8 @@ func LoadConfig(path string) error {
 	viper.SetDefault("SQLITE_PATH", "data/media_crawler.db")
 	viper.SetDefault("MYSQL_DSN", "")
 	viper.SetDefault("POSTGRES_DSN", "")
+	viper.SetDefault("MONGO_URI", "")
+	viper.SetDefault("MONGO_DB", "media_crawler")
 	viper.SetDefault("CACHE_BACKEND", "memory")
 	viper.SetDefault("CACHE_DEFAULT_TTL_SEC", 600)
 	viper.SetDefault("REDIS_ADDR", "")

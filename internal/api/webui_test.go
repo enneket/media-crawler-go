@@ -63,6 +63,27 @@ func TestWebUIAndConfigEndpoints(t *testing.T) {
 		if _, ok := resp["defaults"]; !ok {
 			t.Fatalf("missing defaults")
 		}
+		if v, ok := resp["store_backends"].([]any); ok {
+			found := false
+			for _, it := range v {
+				if s, _ := it.(string); s == "mongodb" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("store_backends missing mongodb: %v", v)
+			}
+		} else {
+			t.Fatalf("store_backends missing or invalid")
+		}
+		if d, ok := resp["defaults"].(map[string]any); ok {
+			if _, ok := d["mongo_db"]; !ok {
+				t.Fatalf("defaults missing mongo_db")
+			}
+		} else {
+			t.Fatalf("defaults invalid")
+		}
 	}
 
 	{
@@ -81,4 +102,3 @@ func TestWebUIAndConfigEndpoints(t *testing.T) {
 		}
 	}
 }
-

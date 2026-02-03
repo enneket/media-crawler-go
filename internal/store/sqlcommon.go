@@ -15,6 +15,7 @@ const (
 	backendSQLite   sqlBackendKind = "sqlite"
 	backendMySQL    sqlBackendKind = "mysql"
 	backendPostgres sqlBackendKind = "postgres"
+	backendMongoDB  sqlBackendKind = "mongodb"
 )
 
 func backendKind() sqlBackendKind {
@@ -26,6 +27,8 @@ func backendKind() sqlBackendKind {
 		return backendMySQL
 	case "postgres", "postgresql":
 		return backendPostgres
+	case "mongodb", "mongo":
+		return backendMongoDB
 	default:
 		return backendFile
 	}
@@ -33,7 +36,7 @@ func backendKind() sqlBackendKind {
 
 func sqlEnabled() bool {
 	k := backendKind()
-	return k == backendSQLite || k == backendMySQL || k == backendPostgres
+	return k == backendSQLite || k == backendMySQL || k == backendPostgres || k == backendMongoDB
 }
 
 func requireSQLBackend() error {

@@ -34,7 +34,7 @@
 ## 与 Python 版差异（未完成/需确认）
 
 ### 存储/数据
-- [ ] MongoDB 存储后端（Python 支持 mongodb；Go 的 store_backends 目前缺失 mongodb）。
+- [x] MongoDB 存储后端（支持 notes/creators/comments；并在 /config/options 暴露 mongodb）。
 - [ ] comments 的 CSV/XLSX 导出形态未对齐：当前 SaveComments 更偏 JSON 透传，CSV/XLSX 需要统一 Comment 模型/传参。
 
 ### 登录
@@ -50,12 +50,12 @@
 
 ### 文档/样例一致性
 - [ ] README 平台状态描述可能过时（代码已内置 7 平台）。
-- [ ] config.example.yaml 的 STORE_BACKEND 注释需与实际支持项对齐（file/sqlite/mysql/postgres）。
+- [x] config.example.yaml 的 STORE_BACKEND 注释与实际支持项对齐（file/sqlite/mysql/postgres/mongodb）。
 
 ## 开发任务清单（可执行）
-- [ ] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
+- [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
 - [ ] T-102 对齐 comments 的 CSV/XLSX：引入统一 Comment 结构并改造各平台落盘。
 - [ ] T-103 补齐登录流程：phone/qrcode 的差异化实现或明确“仅手动登录”并调整选项。
-- [ ] T-104 落地 SAVE_LOGIN_STATE/LOGIN_PHONE：定义行为并实现（含文档与默认策略）。
+- [ ] T-104 落地 LOGIN_PHONE：定义行为并实现（含文档与默认策略）。
 - [ ] T-105 代理供应商按需扩展（与 Python 配置样例对齐）。
-- [ ] T-106 增加 HTTP 形态的日志查询（可选）：提供最近 N 条日志缓存接口。
+- [x] T-106 增加 HTTP 形态的日志查询：提供最近 N 条日志缓存接口。
