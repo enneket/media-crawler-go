@@ -39,7 +39,7 @@
 
 ### 登录
 - [ ] LOGIN_TYPE=phone/qrcode 的“自动化流程”未对齐：目前主要是打开浏览器后人工完成登录 + cookie 注入。
-- [ ] LOGIN_PHONE 未使用（仅配置项存在）。
+- [x] LOGIN_PHONE 已生效：LOGIN_TYPE=phone 时会尝试自动填充手机号到登录输入框（xhs/douyin，best-effort）。
 - [x] SAVE_LOGIN_STATE 已生效：为 false 时使用临时 userDataDir，任务结束自动清理（xhs/douyin）。
 
 ### 代理

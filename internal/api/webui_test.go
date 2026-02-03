@@ -81,6 +81,9 @@ func TestWebUIAndConfigEndpoints(t *testing.T) {
 			if _, ok := d["mongo_db"]; !ok {
 				t.Fatalf("defaults missing mongo_db")
 			}
+			if _, ok := d["login_phone"]; !ok {
+				t.Fatalf("defaults missing login_phone")
+			}
 		} else {
 			t.Fatalf("defaults invalid")
 		}

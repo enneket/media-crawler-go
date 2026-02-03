@@ -41,6 +41,7 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 			"crawler_type":      config.AppConfig.CrawlerType,
 			"keywords":          config.AppConfig.Keywords,
 			"login_type":        config.AppConfig.LoginType,
+			"login_phone":       config.AppConfig.LoginPhone,
 			"store_backend":     config.AppConfig.StoreBackend,
 			"sqlite_path":       config.AppConfig.SQLitePath,
 			"mysql_dsn":         "",

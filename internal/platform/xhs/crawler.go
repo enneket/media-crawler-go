@@ -129,6 +129,12 @@ func (c *XhsCrawler) login(ctx context.Context) error {
 		return fmt.Errorf("invalid LOGIN_TYPE: %s (supported: qrcode|phone|cookie)", loginType)
 	}
 
+	if loginType == "phone" && strings.TrimSpace(config.AppConfig.LoginPhone) != "" {
+		if err := c.tryPrefillPhone(config.AppConfig.LoginPhone); err != nil {
+			logger.Debug("prefill phone failed", "err", err)
+		}
+	}
+
 	logger.Info("not logged in; complete login in browser window", "login_type", loginType)
 	timeoutSec := config.AppConfig.LoginWaitTimeoutSec
 	if timeoutSec <= 0 {
@@ -148,6 +154,40 @@ func (c *XhsCrawler) login(ctx context.Context) error {
 		time.Sleep(1 * time.Second)
 	}
 	return fmt.Errorf("login timed out after %ds", timeoutSec)
+}
+
+func (c *XhsCrawler) tryPrefillPhone(phone string) error {
+	if c.page == nil {
+		return fmt.Errorf("page is nil")
+	}
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return nil
+	}
+	_, err := c.page.Evaluate(`(phone) => {
+  const candidates = [];
+  const inputs = Array.from(document.querySelectorAll('input'));
+  for (const el of inputs) {
+    const t = String(el.getAttribute('type') || '').toLowerCase();
+    if (t && t !== 'text' && t !== 'tel') continue;
+    const ph = String(el.getAttribute('placeholder') || '');
+    const aria = String(el.getAttribute('aria-label') || '');
+    const name = String(el.getAttribute('name') || '');
+    const id = String(el.getAttribute('id') || '');
+    const label = [ph, aria, name, id].join(' ');
+    if (label.includes('手机') || label.includes('手机号') || label.toLowerCase().includes('phone')) {
+      candidates.push(el);
+    }
+  }
+  const el = candidates[0] || inputs.find(x => String(x.type||'').toLowerCase()==='tel') || inputs[0];
+  if (!el) return false;
+  el.focus();
+  el.value = String(phone);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}`, phone)
+	return err
 }
 
 func (c *XhsCrawler) runSearchMode(ctx context.Context, req crawler.Request) (crawler.Result, error) {

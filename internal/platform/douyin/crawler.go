@@ -185,6 +185,7 @@ func (c *DouyinCrawler) close() {
 }
 
 func (c *DouyinCrawler) login(ctx context.Context) error {
+	loginType := strings.ToLower(strings.TrimSpace(config.AppConfig.LoginType))
 	if config.AppConfig.Cookies != "" {
 		cookies := buildCookiesForDouyin(config.AppConfig.Cookies)
 		if len(cookies) > 0 {
@@ -199,6 +200,11 @@ func (c *DouyinCrawler) login(ctx context.Context) error {
 	}
 	if ok := c.isLoggedIn(); ok {
 		return nil
+	}
+	if loginType == "phone" && strings.TrimSpace(config.AppConfig.LoginPhone) != "" {
+		if err := c.tryPrefillPhone(config.AppConfig.LoginPhone); err != nil {
+			logger.Debug("prefill phone failed", "err", err)
+		}
 	}
 	logger.Info("not logged in; log in manually in browser window")
 	timeoutSec := config.AppConfig.LoginWaitTimeoutSec
@@ -215,6 +221,40 @@ func (c *DouyinCrawler) login(ctx context.Context) error {
 		time.Sleep(1 * time.Second)
 	}
 	return fmt.Errorf("login timed out after %ds", timeoutSec)
+}
+
+func (c *DouyinCrawler) tryPrefillPhone(phone string) error {
+	if c.page == nil {
+		return fmt.Errorf("page is nil")
+	}
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return nil
+	}
+	_, err := c.page.Evaluate(`(phone) => {
+  const inputs = Array.from(document.querySelectorAll('input'));
+  const candidates = [];
+  for (const el of inputs) {
+    const t = String(el.getAttribute('type') || '').toLowerCase();
+    if (t && t !== 'text' && t !== 'tel') continue;
+    const ph = String(el.getAttribute('placeholder') || '');
+    const aria = String(el.getAttribute('aria-label') || '');
+    const name = String(el.getAttribute('name') || '');
+    const id = String(el.getAttribute('id') || '');
+    const label = [ph, aria, name, id].join(' ');
+    if (label.includes('手机') || label.includes('手机号') || label.toLowerCase().includes('phone')) {
+      candidates.push(el);
+    }
+  }
+  const el = candidates[0] || inputs.find(x => String(x.type||'').toLowerCase()==='tel') || inputs[0];
+  if (!el) return false;
+  el.focus();
+  el.value = String(phone);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}`, phone)
+	return err
 }
 
 func (c *DouyinCrawler) isLoggedIn() bool {
