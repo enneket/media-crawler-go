@@ -47,7 +47,7 @@
 
 ## 待转写（P1，中优先）
 - [ ] WebUI：可视化配置、任务管理、日志与数据预览。
-- [ ] WebSocket：推送 logs/status（对齐 Python `/api/ws/logs`、`/api/ws/status`）。
+- [x] WebSocket：推送 logs/status（对齐 Python `/api/ws/logs`、`/api/ws/status`）。
 - [ ] 词云等增值能力：评论词云（读取 comments 数据生成图片）。
 - [ ] 测试体系：按平台/模式的可回放测试（mock HTTP + 签名模块单测）。
 - [ ] 存储后端扩展：Excel、MySQL/Postgres、MongoDB（按需）。
@@ -59,7 +59,7 @@
 - [ ] 配置接口：/config/platforms、/config/options（对齐 Python WebUI 动态渲染所需的选项接口）。
 - [ ] 环境自检：/env/check（对齐 Python 版“命令行 --help”自检逻辑）。
 - [ ] WebUI 静态托管：挂载前端产物，根路径返回 index.html。
-- [ ] WebSocket：日志流与状态流。
+- [x] WebSocket：日志流与状态流。
 
 ### 平台覆盖
 - [ ] 将 bilibili/weibo/tieba/zhihu/ks 从“detail 最小闭环”扩展到 search/creator（先补参数与落盘，再补分页/并发与风控）。
@@ -77,7 +77,7 @@
 - [x] T-006 补齐其他平台：再实现 微博 detail 最小闭环。
 - [x] T-007 增加统一 logger（结构化）并替换 fmt.Printf。
 - [x] T-008 增加 Data API：/data/files、/data/files/{path} 预览、/data/download、/data/stats。
-- [ ] T-009 WebSocket：/ws/logs、/ws/status（内置任务执行器直接推送，无需子进程）。
+- [x] T-009 WebSocket：/ws/logs、/ws/status（内置任务执行器直接推送，无需子进程）。
 - [ ] T-010 WebUI：静态资源托管 + 配置页 + 任务页（复用 T-008/T-009）。
 - [ ] T-011 扩展更多平台能力：bili/wb/tieba/zhihu/ks 的 search/creator。
 - [ ] T-012 存储扩展：Excel（可选）与输出目录配置。

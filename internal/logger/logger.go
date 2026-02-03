@@ -22,6 +22,7 @@ func InitFromConfig() {
 	default:
 		handler = slog.NewJSONHandler(os.Stdout, opts)
 	}
+	handler = NewBroadcastHandler(handler)
 	slog.SetDefault(slog.New(handler))
 }
 
