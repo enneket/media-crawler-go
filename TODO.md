@@ -49,7 +49,7 @@
 - [x] WebUI：可视化配置、任务管理、日志与数据预览（内置静态页 + API）。
 - [x] WebSocket：推送 logs/status（对齐 Python `/api/ws/logs`、`/api/ws/status`）。
 - [ ] 词云等增值能力：评论词云（读取 comments 数据生成图片）。
-- [ ] 测试体系：按平台/模式的可回放测试（mock HTTP + 签名模块单测）。
+- [x] 测试体系：按平台/模式的可回放测试（mock HTTP + 签名模块单测）。
 - [ ] 存储后端扩展：Excel、MySQL/Postgres、MongoDB（按需）。
 - [ ] Cache 抽象：memory/redis（用于跨流程去重、签名/代理缓存等按需场景）。
 
@@ -84,4 +84,4 @@
 - [x] T-011b bilibili：search/creator（搜索接口 + up 投稿列表 + view 详情保存）。
 - [x] T-011c tieba：search/creator（/f/search/res 抓列表 + /home/main 抓用户帖子列表 + 归档详情页）。
 - [ ] T-012 存储扩展：Excel（可选）与输出目录配置。
-- [ ] T-013 测试体系：可回放的 HTTP fixture（签名/接口解析稳定性）。
+- [x] T-013 测试体系：可回放的 HTTP fixture（签名/接口解析稳定性）。

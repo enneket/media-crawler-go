@@ -14,6 +14,7 @@ var (
 	rePhoto      = regexp.MustCompile(`(?i)kuaishou\.com/photo/([a-zA-Z0-9_-]+)`)
 	rePhotoPath  = regexp.MustCompile(`(?i)/photo/([a-zA-Z0-9_-]+)`)
 	reProfile    = regexp.MustCompile(`(?i)kuaishou\.com/profile/([a-zA-Z0-9_-]+)`)
+	reProfilePath = regexp.MustCompile(`(?i)/profile/([a-zA-Z0-9_-]+)`)
 	reBad        = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
 )
 
@@ -26,6 +27,12 @@ func ParseKSID(input string) (ksid string, noteID string, err error) {
 		return m[1], sanitizeID(m[1]), nil
 	}
 	if m := rePhoto.FindStringSubmatch(s); len(m) == 2 {
+		return m[1], sanitizeID(m[1]), nil
+	}
+	if m := reShortVideoPath.FindStringSubmatch(s); len(m) == 2 {
+		return m[1], sanitizeID(m[1]), nil
+	}
+	if m := rePhotoPath.FindStringSubmatch(s); len(m) == 2 {
 		return m[1], sanitizeID(m[1]), nil
 	}
 	if strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") {
@@ -44,9 +51,13 @@ func sanitizeID(s string) string {
 	return reBad.ReplaceAllString(v, "_")
 }
 
-func ExtractDetailURLsFromHTML(html string, max int) []string {
+func ExtractDetailURLsFromHTML(html string, baseURL string, max int) []string {
 	if max <= 0 {
 		max = 200
+	}
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
+		baseURL = "https://www.kuaishou.com"
 	}
 	seen := make(map[string]struct{}, 32)
 	out := make([]string, 0, 32)
@@ -54,7 +65,7 @@ func ExtractDetailURLsFromHTML(html string, max int) []string {
 		if id == "" {
 			return
 		}
-		u := "https://www.kuaishou.com/" + kind + "/" + id
+		u := baseURL + "/" + kind + "/" + id
 		if _, ok := seen[u]; ok {
 			return
 		}
@@ -103,6 +114,9 @@ func ParseKSCreatorID(input string) (creatorID string, err error) {
 		return "", fmt.Errorf("empty input")
 	}
 	if m := reProfile.FindStringSubmatch(s); len(m) == 2 {
+		return sanitizeID(m[1]), nil
+	}
+	if m := reProfilePath.FindStringSubmatch(s); len(m) == 2 {
 		return sanitizeID(m[1]), nil
 	}
 	if strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") {

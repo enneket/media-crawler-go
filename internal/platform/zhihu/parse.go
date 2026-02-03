@@ -11,7 +11,6 @@ import (
 var (
 	reAnswer = regexp.MustCompile(`(?i)zhihu\.com/question/(\d+)(?:/answer/(\d+))?`)
 	reAnswerPath = regexp.MustCompile(`(?i)/question/(\d+)(?:/answer/(\d+))?`)
-	reAnswerAny = regexp.MustCompile(`(?i)(?:https?://(?:www\.)?zhihu\.com)?/question/(\d+)(?:/answer/(\d+))?`)
 	reQID    = regexp.MustCompile(`(?i)question/(\d+)`)
 	reAID    = regexp.MustCompile(`(?i)answer/(\d+)`)
 	reDigits = regexp.MustCompile(`^\d+$`)
@@ -57,9 +56,13 @@ func sanitizeID(s string) string {
 	return reBad.ReplaceAllString(v, "_")
 }
 
-func ExtractDetailURLsFromHTML(html string, max int) []string {
+func ExtractDetailURLsFromHTML(html string, baseURL string, max int) []string {
 	if max <= 0 {
 		max = 200
+	}
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
+		baseURL = "https://www.zhihu.com"
 	}
 	seen := make(map[string]struct{}, 32)
 	out := make([]string, 0, 32)
@@ -67,7 +70,7 @@ func ExtractDetailURLsFromHTML(html string, max int) []string {
 		if qid == "" {
 			return
 		}
-		u := "https://www.zhihu.com/question/" + qid
+		u := baseURL + "/question/" + qid
 		if aid != "" {
 			u += "/answer/" + aid
 		}
@@ -78,7 +81,7 @@ func ExtractDetailURLsFromHTML(html string, max int) []string {
 		out = append(out, u)
 	}
 
-	for _, m := range reAnswerAny.FindAllStringSubmatch(html, -1) {
+	for _, m := range reAnswerPath.FindAllStringSubmatch(html, -1) {
 		if len(m) != 3 {
 			continue
 		}

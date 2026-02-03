@@ -33,7 +33,7 @@ func TestExtractDetailURLsFromHTML(t *testing.T) {
 <a href="https://www.zhihu.com/question/789/answer/111">b</a>
 <a href="https://www.zhihu.com/question/789">c</a>
 `
-	got := ExtractDetailURLsFromHTML(html, 10)
+	got := ExtractDetailURLsFromHTML(html, "https://www.zhihu.com", 10)
 	if len(got) < 3 {
 		t.Fatalf("got=%v", got)
 	}

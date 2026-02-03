@@ -112,13 +112,24 @@ func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.R
 			default:
 			}
 
-			searchURL := fmt.Sprintf("https://www.kuaishou.com/search/video?searchKey=%s&page=%d", url.QueryEscape(keyword), page)
+			searchURL := ""
+			singlePage := false
+			if strings.HasPrefix(keyword, "http://") || strings.HasPrefix(keyword, "https://") {
+				searchURL = keyword
+				singlePage = true
+			} else {
+				searchURL = fmt.Sprintf("https://www.kuaishou.com/search/video?searchKey=%s&page=%d", url.QueryEscape(keyword), page)
+			}
 			res, err := c.client.FetchHTML(ctx, searchURL)
 			if err != nil {
 				logger.Error("kuaishou search fetch failed", "url", searchURL, "err", err)
 				break
 			}
-			candidates := ExtractDetailURLsFromHTML(res.Body, 500)
+			baseURL := "https://www.kuaishou.com"
+			if pu, err := url.Parse(res.URL); err == nil && pu.Scheme != "" && pu.Host != "" {
+				baseURL = pu.Scheme + "://" + pu.Host
+			}
+			candidates := ExtractDetailURLsFromHTML(res.Body, baseURL, 500)
 			if len(candidates) == 0 {
 				break
 			}
@@ -149,6 +160,9 @@ func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.R
 			page++
 			if config.AppConfig.CrawlerMaxSleepSec > 0 {
 				crawler.Sleep(ctx, time.Duration(config.AppConfig.CrawlerMaxSleepSec)*time.Second)
+			}
+			if singlePage {
+				break
 			}
 		}
 	}
@@ -210,7 +224,11 @@ func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.
 			logger.Error("kuaishou save creator failed", "creator_id", creatorID, "err", err)
 		}
 
-		candidates := ExtractDetailURLsFromHTML(res.Body, 500)
+		baseURL := "https://www.kuaishou.com"
+		if pu, err := url.Parse(res.URL); err == nil && pu.Scheme != "" && pu.Host != "" {
+			baseURL = pu.Scheme + "://" + pu.Host
+		}
+		candidates := ExtractDetailURLsFromHTML(res.Body, baseURL, 500)
 		tasks := make([]string, 0, len(candidates))
 		for _, u := range candidates {
 			if maxNotes > 0 && out.Processed+len(tasks) >= maxNotes {

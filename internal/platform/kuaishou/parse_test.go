@@ -31,7 +31,7 @@ func TestExtractDetailURLsFromHTML(t *testing.T) {
 <a href="/photo/xyz_9">y</a>
 <a href="https://www.kuaishou.com/short-video/abc123">dup</a>
 `
-	got := ExtractDetailURLsFromHTML(html, 10)
+	got := ExtractDetailURLsFromHTML(html, "https://www.kuaishou.com", 10)
 	if len(got) != 2 {
 		t.Fatalf("got=%v", got)
 	}
@@ -49,6 +49,14 @@ func TestParseKSCreatorID(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 	if id != "user_1" {
+		t.Fatalf("id=%s", id)
+	}
+
+	id, err = ParseKSCreatorID("http://example.local/profile/user_2")
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if id != "user_2" {
 		t.Fatalf("id=%s", id)
 	}
 }
