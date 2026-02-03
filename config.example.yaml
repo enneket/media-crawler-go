@@ -55,6 +55,9 @@ ENABLE_GET_MEDIAS: false
 # Tieba (detail mode, optional)
 # TIEBA_SPECIFIED_NOTE_URL_LIST:
 #   - "https://tieba.baidu.com/p/123456"
+# Tieba (creator mode, optional)
+# TIEBA_CREATOR_URL_LIST:
+#   - "https://tieba.baidu.com/home/main?id=tb.1.xxxxx"
 # Zhihu (detail mode, optional)
 # ZHIHU_SPECIFIED_NOTE_URL_LIST:
 #   - "https://www.zhihu.com/question/123/answer/456"

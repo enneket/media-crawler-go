@@ -10,11 +10,13 @@ import (
 )
 
 var (
-	reTiebaP   = regexp.MustCompile(`(?i)/p/(\d+)`)
-	reTiebaKZ  = regexp.MustCompile(`(?i)[?&]kz=(\d+)`)
-	reTiebaKZ2 = regexp.MustCompile(`(?i)^kz=(\d+)$`)
-	reDigits   = regexp.MustCompile(`^\d+$`)
-	reBadChars = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+	reTiebaP      = regexp.MustCompile(`(?i)/p/(\d+)`)
+	reTiebaKZ     = regexp.MustCompile(`(?i)[?&]kz=(\d+)`)
+	reTiebaKZ2    = regexp.MustCompile(`(?i)^kz=(\d+)$`)
+	reDigits      = regexp.MustCompile(`^\d+$`)
+	reBadChars    = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+	reTiebaHomeID = regexp.MustCompile(`(?i)[?&]id=([^&]+)`)
+	reTiebaHomeUN = regexp.MustCompile(`(?i)[?&]un=([^&]+)`)
 )
 
 func ParseThreadID(input string) (threadID string, noteID string, err error) {
@@ -58,4 +60,27 @@ func sanitizeID(s string) string {
 		return ""
 	}
 	return reBadChars.ReplaceAllString(v, "_")
+}
+
+func ParseCreatorKey(input string) (creatorKey string, err error) {
+	s := strings.TrimSpace(input)
+	if s == "" {
+		return "", fmt.Errorf("empty input")
+	}
+	if strings.HasPrefix(s, "id=") && strings.TrimSpace(strings.TrimPrefix(s, "id=")) != "" {
+		return sanitizeID(strings.TrimPrefix(s, "id=")), nil
+	}
+	if strings.HasPrefix(s, "un=") && strings.TrimSpace(strings.TrimPrefix(s, "un=")) != "" {
+		return sanitizeID(strings.TrimPrefix(s, "un=")), nil
+	}
+	if m := reTiebaHomeID.FindStringSubmatch(s); len(m) == 2 && strings.TrimSpace(m[1]) != "" {
+		return sanitizeID(m[1]), nil
+	}
+	if m := reTiebaHomeUN.FindStringSubmatch(s); len(m) == 2 && strings.TrimSpace(m[1]) != "" {
+		return sanitizeID(m[1]), nil
+	}
+	if reDigits.MatchString(s) {
+		return sanitizeID(s), nil
+	}
+	return sanitizeID(s), nil
 }

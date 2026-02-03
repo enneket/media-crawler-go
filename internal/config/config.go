@@ -66,6 +66,7 @@ type Config struct {
 
 	// Tieba Specific
 	TiebaSpecifiedNoteUrls []string `mapstructure:"TIEBA_SPECIFIED_NOTE_URL_LIST"`
+	TiebaCreatorUrlList    []string `mapstructure:"TIEBA_CREATOR_URL_LIST"`
 
 	// Zhihu Specific
 	ZhihuSpecifiedNoteUrls []string `mapstructure:"ZHIHU_SPECIFIED_NOTE_URL_LIST"`
@@ -120,6 +121,7 @@ func LoadConfig(path string) error {
 	viper.SetDefault("BILI_CREATOR_ID_LIST", []string{})
 	viper.SetDefault("BILI_SEARCH_MODE", "video")
 	viper.SetDefault("TIEBA_SPECIFIED_NOTE_URL_LIST", []string{})
+	viper.SetDefault("TIEBA_CREATOR_URL_LIST", []string{})
 	viper.SetDefault("ZHIHU_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("KS_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("WB_CREATOR_ID_LIST", []string{})

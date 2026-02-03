@@ -48,8 +48,12 @@ func RequestFromConfig(cfg config.Config) Request {
 			out.Inputs = cfg.WBCreatorIdList
 		}
 	case "tieba", "tb", "贴吧":
-		out.Mode = ModeDetail
-		out.Inputs = cfg.TiebaSpecifiedNoteUrls
+		switch mode {
+		case ModeDetail:
+			out.Inputs = cfg.TiebaSpecifiedNoteUrls
+		case ModeCreator:
+			out.Inputs = cfg.TiebaCreatorUrlList
+		}
 	case "zhihu", "zh", "知乎":
 		out.Mode = ModeDetail
 		out.Inputs = cfg.ZhihuSpecifiedNoteUrls
