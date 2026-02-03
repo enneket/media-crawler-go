@@ -10,6 +10,8 @@ func NewProvider(name string) (Provider, error) {
 		return NewKuaiDaiLiFromEnv(), nil
 	case ProviderWanDouHTTP:
 		return NewWanDouHTTPFromEnv(), nil
+	case ProviderStatic:
+		return NewStaticFromConfigOrEnv(), nil
 	default:
 		return nil, fmt.Errorf("unknown proxy provider: %s", name)
 	}

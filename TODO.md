@@ -43,13 +43,13 @@
 - [x] SAVE_LOGIN_STATE 已生效：为 false 时使用临时 userDataDir，任务结束自动清理（xhs/douyin）。
 
 ### 代理
-- [ ] 代理供应商覆盖未对齐：Go 仅 kuaidaili / wandouhttp；Python 的 .env.example 还包含其他供应商示例（按需补齐）。
+- [x] 代理供应商差异已缓解：新增 static provider 支持自定义代理列表/文件（仍可按需补齐更多供应商）。
 
 ### API/WebUI
 - [x] 增加“拉取历史日志”接口：GET /logs（并兼容 GET /crawler/logs）。
 
 ### 文档/样例一致性
-- [ ] README 平台状态描述可能过时（代码已内置 7 平台）。
+- [x] README 平台状态描述已更新（与代码内置平台对齐，并补充 API mode）。
 - [x] config.example.yaml 的 STORE_BACKEND 注释与实际支持项对齐（file/sqlite/mysql/postgres/mongodb）。
 
 ## 开发任务清单（可执行）

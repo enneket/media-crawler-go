@@ -11,6 +11,7 @@ type ProviderName string
 const (
 	ProviderKuaiDaiLi  ProviderName = "kuaidaili"
 	ProviderWanDouHTTP ProviderName = "wandouhttp"
+	ProviderStatic     ProviderName = "static"
 )
 
 type Proxy struct {

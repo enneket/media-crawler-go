@@ -1,11 +1,19 @@
 # MediaCrawler Go
 
 This is a Go rewrite of the [MediaCrawler](https://github.com/NanmiCoder/MediaCrawler) project.
-It currently supports crawling **Xiaohongshu (XHS)** with signature generation using Playwright.
+It supports crawling multiple platforms with signature generation using Playwright:
+
+- xhs (Xiaohongshu / 小红书)
+- douyin (抖音)
+- bilibili
+- weibo
+- tieba
+- zhihu
+- kuaishou
 
 ## Prerequisites
 
-- Go 1.21+
+- Go (see `go.mod`)
 - Chrome/Chromium browser
 
 ## Installation
@@ -26,15 +34,26 @@ Create a `config.yaml` file in the root directory (see `config.example.yaml`).
 
 Notes:
 - If `HEADLESS: true`, you must use `LOGIN_TYPE: cookie` and provide `COOKIES`.
-- `LOGIN_TYPE: qrcode/phone` relies on completing login manually in the opened browser window; the crawler waits up to `LOGIN_WAIT_TIMEOUT_SEC`.
+- `LOGIN_TYPE: qrcode/phone` relies on completing login manually in the opened browser window; the crawler waits up to `LOGIN_WAIT_TIMEOUT_SEC`. If `LOGIN_TYPE: phone` and `LOGIN_PHONE` is set, it will try to prefill the phone input (best-effort).
+- Proxy: set `ENABLE_IP_PROXY: true`. `IP_PROXY_PROVIDER_NAME` supports `kuaidaili`, `wandouhttp`, and `static` (use `IP_PROXY_LIST` or `IP_PROXY_FILE`).
 
 ## Output
 
 - Notes: `data/<platform>/notes/<note_id>/note.(json|csv)`
-- Comments: `data/<platform>/notes/<note_id>/comments.(jsonl|csv)` (deduped via `comments.idx`)
+- Comments: `data/<platform>/notes/<note_id>/comments.(jsonl|csv|xlsx)` (deduped via `comments.idx`, xlsx currently for xhs/douyin)
 - Media: `data/<platform>/notes/<note_id>/media/*`
 
-## Douyin Detail
+## API Mode (Web UI)
+
+Start the API server:
+
+```bash
+go run cmd/media-crawler/main.go -api -addr :8080
+```
+
+Then open `http://127.0.0.1:8080/` in the browser.
+
+## Douyin Detail (Example)
 
 - Set `PLATFORM: "douyin"` (or `"dy"`), `CRAWLER_TYPE: "detail"`
 - Provide `DY_SPECIFIED_NOTE_URL_LIST` with `/video/<aweme_id>` URL or numeric aweme_id
@@ -65,13 +84,18 @@ go run cmd/media-crawler/main.go
 
 - [x] Xiaohongshu Crawling (search/detail/creator)
 - [x] Douyin Crawling (search/detail/creator)
+- [x] Bilibili Crawling (search/detail/creator)
+- [x] Weibo Crawling (search/detail/creator)
+- [x] Tieba Crawling (search/detail/creator)
+- [x] Zhihu Crawling (search/detail/creator)
+- [x] Kuaishou Crawling (search/detail/creator)
 - [x] Signature Generation (X-S, X-T, X-S-Common) using Playwright
 - [x] Persistent Browser Context (Login state saving)
 - [x] Comment Crawling (pagination, optional sub-comments)
 - [x] Media Download (basic)
 - [x] CDP Mode (connect over remote debugging)
-- [x] Proxy Pool (kuaidaili / wandouhttp)
-- [ ] Other Platforms (Bilibili, Weibo, etc.)
+- [x] Proxy Pool (kuaidaili / wandouhttp / static list)
+- [x] Store Backends (file/sqlite/mysql/postgres/mongodb)
 
 See [TODO.md](./TODO.md) for the porting checklist.
 

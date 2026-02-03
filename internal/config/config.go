@@ -36,6 +36,8 @@ type Config struct {
 	EnableIPProxy        bool   `mapstructure:"ENABLE_IP_PROXY"`
 	IPProxyPoolCount     int    `mapstructure:"IP_PROXY_POOL_COUNT"`
 	IPProxyProviderName  string `mapstructure:"IP_PROXY_PROVIDER_NAME"`
+	IPProxyList          string `mapstructure:"IP_PROXY_LIST"`
+	IPProxyFile          string `mapstructure:"IP_PROXY_FILE"`
 	Headless             bool   `mapstructure:"HEADLESS"`
 	SaveLoginState       bool   `mapstructure:"SAVE_LOGIN_STATE"`
 	EnableCDPMode        bool   `mapstructure:"ENABLE_CDP_MODE"`
@@ -123,6 +125,8 @@ func LoadConfig(path string) error {
 	viper.SetDefault("ENABLE_IP_PROXY", false)
 	viper.SetDefault("IP_PROXY_POOL_COUNT", 2)
 	viper.SetDefault("IP_PROXY_PROVIDER_NAME", "kuaidaili")
+	viper.SetDefault("IP_PROXY_LIST", "")
+	viper.SetDefault("IP_PROXY_FILE", "")
 	viper.SetDefault("HEADLESS", false)
 	viper.SetDefault("SAVE_LOGIN_STATE", true)
 	viper.SetDefault("ENABLE_CDP_MODE", true)
