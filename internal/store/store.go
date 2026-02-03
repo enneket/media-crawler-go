@@ -102,6 +102,9 @@ func GetStore() Store {
 	if config.AppConfig.SaveDataOption == "csv" {
 		return NewCsvStore(path)
 	}
+	if config.AppConfig.SaveDataOption == "xlsx" {
+		return NewXlsxStore(path)
+	}
 	return NewJsonStore(path)
 }
 
@@ -111,6 +114,9 @@ func SaveNote(note interface{}) error {
 	ext := "json"
 	if config.AppConfig.SaveDataOption == "csv" {
 		ext = "csv"
+	}
+	if config.AppConfig.SaveDataOption == "xlsx" {
+		ext = "xlsx"
 	}
 	return s.Save(note, fmt.Sprintf("notes_%s.%s", date, ext))
 }
@@ -128,6 +134,9 @@ func SaveComments(comments interface{}) error {
 	if config.AppConfig.SaveDataOption == "csv" {
 		ext = "csv"
 	}
+	if config.AppConfig.SaveDataOption == "xlsx" {
+		ext = "xlsx"
+	}
 	return s.Save(comments, fmt.Sprintf("comments_%s.%s", date, ext))
 }
 
@@ -140,6 +149,9 @@ func SaveCreator(userID string, creator interface{}) error {
 	ext := "json"
 	if config.AppConfig.SaveDataOption == "csv" {
 		ext = "csv"
+	}
+	if config.AppConfig.SaveDataOption == "xlsx" {
+		ext = "xlsx"
 	}
 	filename := fmt.Sprintf("creators_%s.%s", date, ext)
 	return s.Save(creator, filename)

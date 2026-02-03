@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type dataFileInfo struct {
@@ -151,6 +153,7 @@ func listDataFiles(dataDir string, q url.Values) ([]dataFileInfo, error) {
 		".csv":   {},
 		".db":    {},
 		".svg":   {},
+		".xlsx":  {},
 	}
 
 	if _, err := os.Stat(dataDir); err != nil {
@@ -374,6 +377,42 @@ func previewDataFile(path string, limit int) (any, int, []string, error) {
 			}
 		}
 		return rows, total, header, nil
+	case ".xlsx":
+		f, err := excelize.OpenFile(path)
+		if err != nil {
+			return nil, 0, nil, err
+		}
+		defer f.Close()
+		sheets := f.GetSheetList()
+		if len(sheets) == 0 {
+			return []any{}, 0, nil, nil
+		}
+		rows, err := f.GetRows(sheets[0])
+		if err != nil {
+			return nil, 0, nil, err
+		}
+		if len(rows) == 0 {
+			return []any{}, 0, nil, nil
+		}
+		header := rows[0]
+		total := len(rows) - 1
+		if total < 0 {
+			total = 0
+		}
+		data := make([]map[string]string, 0, minInt(limit, 64))
+		for i := 1; i < len(rows) && len(data) < limit; i++ {
+			rec := rows[i]
+			obj := map[string]string{}
+			for j, k := range header {
+				if j < len(rec) {
+					obj[k] = rec[j]
+				} else {
+					obj[k] = ""
+				}
+			}
+			data = append(data, obj)
+		}
+		return data, total, header, nil
 	default:
 		return nil, 0, nil, errors.New("unsupported file type for preview")
 	}
@@ -442,6 +481,26 @@ func tryCountRecords(path string) (*int, error) {
 			return nil, nil
 		}
 		n--
+		if n < 0 {
+			n = 0
+		}
+		return &n, nil
+	case ".xlsx":
+		f, err := excelize.OpenFile(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		sheets := f.GetSheetList()
+		if len(sheets) == 0 {
+			n := 0
+			return &n, nil
+		}
+		rows, err := f.GetRows(sheets[0])
+		if err != nil {
+			return nil, err
+		}
+		n := len(rows) - 1
 		if n < 0 {
 			n = 0
 		}

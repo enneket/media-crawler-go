@@ -73,6 +73,10 @@ func SaveNoteDetail(noteID string, note interface{}) error {
 		w.Flush()
 		return w.Error()
 	}
+	if config.AppConfig.SaveDataOption == "xlsx" {
+		wb := NewXlsxStore(dir)
+		return wb.Save(note, "note.xlsx")
+	}
 
 	path := filepath.Join(dir, "note.json")
 	b, err := json.Marshal(note)

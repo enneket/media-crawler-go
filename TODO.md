@@ -50,7 +50,8 @@
 - [x] WebSocket：推送 logs/status（对齐 Python `/api/ws/logs`、`/api/ws/status`）。
 - [x] 词云等增值能力：评论词云（读取 comments 数据生成图片）。
 - [x] 测试体系：按平台/模式的可回放测试（mock HTTP + 签名模块单测）。
-- [ ] 存储后端扩展：Excel、MySQL/Postgres、MongoDB（按需）。
+- [x] 存储后端扩展：Excel（XLSX）。
+- [ ] 存储后端扩展：MySQL/Postgres、MongoDB（按需）。
 - [ ] Cache 抽象：memory/redis（用于跨流程去重、签名/代理缓存等按需场景）。
 
 ## 与 Python 版差异（待补齐）
@@ -83,5 +84,5 @@
 - [x] T-011a 微博：search/creator（m.weibo.cn /api/container/getIndex + /statuses/show + creator profile）。
 - [x] T-011b bilibili：search/creator（搜索接口 + up 投稿列表 + view 详情保存）。
 - [x] T-011c tieba：search/creator（/f/search/res 抓列表 + /home/main 抓用户帖子列表 + 归档详情页）。
-- [ ] T-012 存储扩展：Excel（可选）与输出目录配置。
+- [x] T-012 存储扩展：Excel（可选）与输出目录配置。
 - [x] T-013 测试体系：可回放的 HTTP fixture（签名/接口解析稳定性）。

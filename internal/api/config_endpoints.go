@@ -32,7 +32,7 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 		"crawler_types":    []string{"search", "detail", "creator"},
 		"login_types":      []string{"qrcode", "phone", "cookie"},
 		"store_backends":   []string{"file", "sqlite"},
-		"save_data_option": []string{"json", "csv"},
+		"save_data_option": []string{"json", "csv", "xlsx"},
 		"bili_search_mode": []string{"video"},
 		"wb_search_type":   []string{"1", "61", "60", "64"},
 		"defaults": map[string]any{
