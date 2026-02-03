@@ -201,6 +201,11 @@ func (c *DouyinCrawler) login(ctx context.Context) error {
 	if ok := c.isLoggedIn(); ok {
 		return nil
 	}
+	if loginType == "qrcode" || loginType == "phone" {
+		if err := c.tryOpenLoginDialog(loginType); err != nil {
+			logger.Debug("open login dialog failed", "err", err)
+		}
+	}
 	if loginType == "phone" && strings.TrimSpace(config.AppConfig.LoginPhone) != "" {
 		if err := c.tryPrefillPhone(config.AppConfig.LoginPhone); err != nil {
 			logger.Debug("prefill phone failed", "err", err)
@@ -221,6 +226,40 @@ func (c *DouyinCrawler) login(ctx context.Context) error {
 		time.Sleep(1 * time.Second)
 	}
 	return fmt.Errorf("login timed out after %ds", timeoutSec)
+}
+
+func (c *DouyinCrawler) tryOpenLoginDialog(loginType string) error {
+	if c.page == nil {
+		return fmt.Errorf("page is nil")
+	}
+	loginType = strings.ToLower(strings.TrimSpace(loginType))
+	if loginType != "qrcode" && loginType != "phone" {
+		return nil
+	}
+	_, err := c.page.Evaluate(`(loginType) => {
+  const textMatch = (el, s) => {
+    if (!el) return false;
+    const t = (el.innerText || el.textContent || '').trim();
+    return t.includes(s);
+  };
+  const buttons = Array.from(document.querySelectorAll('button, a, div[role="button"], span[role="button"]'));
+  for (const el of buttons) {
+    if (textMatch(el, '登录')) {
+      try { el.click(); } catch {}
+      break;
+    }
+  }
+  const tabText = loginType === 'qrcode' ? ['二维码', '扫码'] : ['手机', '手机号'];
+  for (const t of tabText) {
+    for (const el of buttons) {
+      if (textMatch(el, t)) {
+        try { el.click(); return true; } catch {}
+      }
+    }
+  }
+  return true;
+}`, loginType)
+	return err
 }
 
 func (c *DouyinCrawler) tryPrefillPhone(phone string) error {

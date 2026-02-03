@@ -38,7 +38,7 @@
 - [ ] comments 的导出形态未完全对齐：已支持 xhs/douyin per-note CSV/XLSX；仍缺少跨平台统一 Comment 模型与全局导出。
 
 ### 登录
-- [ ] LOGIN_TYPE=phone/qrcode 的“自动化流程”未对齐：目前主要是打开浏览器后人工完成登录 + cookie 注入。
+- [x] LOGIN_TYPE=phone/qrcode 的“自动化流程”已增强：会尝试自动打开登录弹窗并切到对应方式（xhs/douyin，best-effort），仍需手动完成验证/扫码/短信。
 - [x] LOGIN_PHONE 已生效：LOGIN_TYPE=phone 时会尝试自动填充手机号到登录输入框（xhs/douyin，best-effort）。
 - [x] SAVE_LOGIN_STATE 已生效：为 false 时使用临时 userDataDir，任务结束自动清理（xhs/douyin）。
 
@@ -55,7 +55,7 @@
 ## 开发任务清单（可执行）
 - [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
 - [ ] T-102 对齐 comments 的 CSV/XLSX：引入统一 Comment 结构并改造各平台落盘。
-- [ ] T-103 补齐登录流程：phone/qrcode 的差异化实现或明确“仅手动登录”并调整选项。
-- [ ] T-104 落地 LOGIN_PHONE：定义行为并实现（含文档与默认策略）。
-- [ ] T-105 代理供应商按需扩展（与 Python 配置样例对齐）。
+- [x] T-103 补齐登录流程：phone/qrcode 已尝试自动切换登录方式（best-effort）。
+- [x] T-104 落地 LOGIN_PHONE：phone 登录时尝试自动填充手机号（xhs/douyin）。
+- [x] T-105 代理供应商按需扩展：新增 static provider 支持自定义代理列表/文件。
 - [x] T-106 增加 HTTP 形态的日志查询：提供最近 N 条日志缓存接口。

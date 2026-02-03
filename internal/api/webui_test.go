@@ -77,12 +77,29 @@ func TestWebUIAndConfigEndpoints(t *testing.T) {
 		} else {
 			t.Fatalf("store_backends missing or invalid")
 		}
+		if v, ok := resp["proxy_providers"].([]any); ok {
+			found := false
+			for _, it := range v {
+				if s, _ := it.(string); s == "static" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("proxy_providers missing static: %v", v)
+			}
+		} else {
+			t.Fatalf("proxy_providers missing or invalid")
+		}
 		if d, ok := resp["defaults"].(map[string]any); ok {
 			if _, ok := d["mongo_db"]; !ok {
 				t.Fatalf("defaults missing mongo_db")
 			}
 			if _, ok := d["login_phone"]; !ok {
 				t.Fatalf("defaults missing login_phone")
+			}
+			if _, ok := d["ip_proxy_provider"]; !ok {
+				t.Fatalf("defaults missing ip_proxy_provider")
 			}
 		} else {
 			t.Fatalf("defaults invalid")
