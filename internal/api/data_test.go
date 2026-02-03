@@ -24,28 +24,29 @@ func TestDataFilesPreviewDownload(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chdir(oldwd) })
 
-	if err := os.MkdirAll(filepath.Join("data", "xhs", "notes", "n1"), 0755); err != nil {
+	dataDir := "data_custom"
+	config.AppConfig = config.Config{DataDir: dataDir}
+
+	if err := os.MkdirAll(filepath.Join(dataDir, "xhs", "notes", "n1"), 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if err := os.MkdirAll(filepath.Join("data", "xhs", "notes", "n2"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dataDir, "xhs", "notes", "n2"), 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
 
 	note1 := `{"note_id":"n1","title":"hello"}`
-	if err := os.WriteFile(filepath.Join("data", "xhs", "notes", "n1", "note.json"), []byte(note1), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dataDir, "xhs", "notes", "n1", "note.json"), []byte(note1), 0644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 	comments := "{\"comment_id\":\"c1\"}\n{\"comment_id\":\"c2\"}\n"
-	if err := os.WriteFile(filepath.Join("data", "xhs", "notes", "n1", "comments.jsonl"), []byte(comments), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dataDir, "xhs", "notes", "n1", "comments.jsonl"), []byte(comments), 0644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
 	csvContent := "\uFEFFa,b\n1,2\n3,4\n"
-	if err := os.WriteFile(filepath.Join("data", "xhs", "notes", "n2", "comments.csv"), []byte(csvContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dataDir, "xhs", "notes", "n2", "comments.csv"), []byte(csvContent), 0644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-
-	config.AppConfig = config.Config{}
 	runFn := func(ctx context.Context) (crawler.Result, error) { return crawler.Result{}, nil }
 	srv := NewServer(NewTaskManagerWithRunner(runFn))
 

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"media-crawler-go/internal/config"
 	"net/http"
 	"net/url"
 	"os"
@@ -25,7 +26,10 @@ type dataFileInfo struct {
 }
 
 func (s *Server) handleDataFilesList(w http.ResponseWriter, r *http.Request) {
-	dataDir := "data"
+	dataDir := strings.TrimSpace(config.AppConfig.DataDir)
+	if dataDir == "" {
+		dataDir = "data"
+	}
 	files, err := listDataFiles(dataDir, r.URL.Query())
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
@@ -41,7 +45,10 @@ func (s *Server) handleDataFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataDir := "data"
+	dataDir := strings.TrimSpace(config.AppConfig.DataDir)
+	if dataDir == "" {
+		dataDir = "data"
+	}
 	fullPath, err := safeDataPath(dataDir, rel)
 	if err != nil {
 		writeJSON(w, http.StatusForbidden, map[string]any{"error": "access denied"})
@@ -95,7 +102,10 @@ func (s *Server) handleDataDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataDir := "data"
+	dataDir := strings.TrimSpace(config.AppConfig.DataDir)
+	if dataDir == "" {
+		dataDir = "data"
+	}
 	fullPath, err := safeDataPath(dataDir, rel)
 	if err != nil {
 		writeJSON(w, http.StatusForbidden, map[string]any{"error": "access denied"})
@@ -120,7 +130,10 @@ func (s *Server) handleDataDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDataStats(w http.ResponseWriter, r *http.Request) {
-	dataDir := "data"
+	dataDir := strings.TrimSpace(config.AppConfig.DataDir)
+	if dataDir == "" {
+		dataDir = "data"
+	}
 	stats, err := dataStats(dataDir)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})

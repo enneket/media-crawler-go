@@ -3,6 +3,8 @@ KEYWORDS: "golang,programming"
 LOGIN_TYPE: "cookie" # qrcode | phone | cookie
 # LOGIN_PHONE: ""
 LOGIN_WAIT_TIMEOUT_SEC: 120
+# Output
+DATA_DIR: "data"
 # Storage
 STORE_BACKEND: "file" # file | sqlite
 SQLITE_PATH: "data/media_crawler.db"

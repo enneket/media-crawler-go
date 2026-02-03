@@ -14,11 +14,15 @@ import (
 )
 
 func PlatformDir() string {
+	dataDir := strings.TrimSpace(config.AppConfig.DataDir)
+	if dataDir == "" {
+		dataDir = "data"
+	}
 	platform := strings.TrimSpace(config.AppConfig.Platform)
 	if platform == "" {
 		platform = "xhs"
 	}
-	return filepath.Join("data", platform)
+	return filepath.Join(dataDir, platform)
 }
 
 func NotesDir() string {

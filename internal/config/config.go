@@ -14,6 +14,7 @@ type Config struct {
 	LoginWaitTimeoutSec  int    `mapstructure:"LOGIN_WAIT_TIMEOUT_SEC"`
 	Cookies              string `mapstructure:"COOKIES"`
 	CrawlerType          string `mapstructure:"CRAWLER_TYPE"`
+	DataDir              string `mapstructure:"DATA_DIR"`
 	StoreBackend         string `mapstructure:"STORE_BACKEND"`
 	SQLitePath           string `mapstructure:"SQLITE_PATH"`
 	LogLevel             string `mapstructure:"LOG_LEVEL"`
@@ -83,6 +84,7 @@ func LoadConfig(path string) error {
 	viper.SetDefault("LOGIN_PHONE", "")
 	viper.SetDefault("LOGIN_WAIT_TIMEOUT_SEC", 120)
 	viper.SetDefault("CRAWLER_TYPE", "search")
+	viper.SetDefault("DATA_DIR", "data")
 	viper.SetDefault("STORE_BACKEND", "file")
 	viper.SetDefault("SQLITE_PATH", "data/media_crawler.db")
 	viper.SetDefault("LOG_LEVEL", "info")

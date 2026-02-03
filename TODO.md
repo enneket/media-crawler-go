@@ -65,7 +65,7 @@
 - [ ] 将 bilibili/weibo/tieba/zhihu/ks 从“detail 最小闭环”扩展到 search/creator（先补参数与落盘，再补分页/并发与风控）。
 
 ### 存储/数据
-- [ ] 输出目录可配置（当前固定 data/，对齐 Python 更灵活的输出形态）。
+- [x] 输出目录可配置（DATA_DIR；同时影响 store 落盘与 /data API）。
 - [ ] Excel 与更多 DB 后端（按实际需求取舍）。
 
 ## 开发任务清单（可执行）
