@@ -118,7 +118,11 @@ func SaveNote(note interface{}) error {
 	if config.AppConfig.SaveDataOption == "xlsx" {
 		ext = "xlsx"
 	}
-	return s.Save(note, fmt.Sprintf("notes_%s.%s", date, ext))
+	if err := s.Save(note, fmt.Sprintf("notes_%s.%s", date, ext)); err != nil {
+		return err
+	}
+	_ = pythonCompatAppendJSON("contents", note)
+	return nil
 }
 
 func SaveComments(comments interface{}) error {
@@ -137,7 +141,11 @@ func SaveComments(comments interface{}) error {
 	if config.AppConfig.SaveDataOption == "xlsx" {
 		ext = "xlsx"
 	}
-	return s.Save(comments, fmt.Sprintf("comments_%s.%s", date, ext))
+	if err := s.Save(comments, fmt.Sprintf("comments_%s.%s", date, ext)); err != nil {
+		return err
+	}
+	_ = pythonCompatAppendJSON("comments", comments)
+	return nil
 }
 
 func SaveCreator(userID string, creator interface{}) error {
@@ -154,5 +162,9 @@ func SaveCreator(userID string, creator interface{}) error {
 		ext = "xlsx"
 	}
 	filename := fmt.Sprintf("creators_%s.%s", date, ext)
-	return s.Save(creator, filename)
+	if err := s.Save(creator, filename); err != nil {
+		return err
+	}
+	_ = pythonCompatAppendJSON("creators", creator)
+	return nil
 }

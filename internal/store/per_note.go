@@ -83,7 +83,11 @@ func SaveNoteDetail(noteID string, note interface{}) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, append(b, '\n'), 0644)
+	if err := os.WriteFile(path, append(b, '\n'), 0644); err != nil {
+		return err
+	}
+	_ = pythonCompatAppendJSON("contents", note)
+	return nil
 }
 
 func AppendUniqueJSONL(dir, dataFilename, indexFilename string, items []any, keyFn func(any) (string, error)) (int, error) {

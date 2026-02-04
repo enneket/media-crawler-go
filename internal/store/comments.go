@@ -14,6 +14,9 @@ func AppendUniqueCommentsJSONL(noteID string, items []any, keyFn func(any) (stri
 	if err := sqlInsertComments(noteID, items, keyFn); err != nil {
 		return n, err
 	}
+	for _, it := range items {
+		_ = pythonCompatAppendJSON("comments", it)
+	}
 	return n, nil
 }
 
@@ -48,7 +51,14 @@ func AppendUniqueCommentsXLSX(noteID string, items []any, keyFn func(any) (strin
 }
 
 func AppendUniqueGlobalCommentsJSONL(items []any, keyFn func(any) (string, error)) (int, error) {
-	return AppendUniqueJSONL(PlatformDir(), "comments.jsonl", "comments.global.idx", items, keyFn)
+	n, err := AppendUniqueJSONL(PlatformDir(), "comments.jsonl", "comments.global.idx", items, keyFn)
+	if err != nil {
+		return n, err
+	}
+	for _, it := range items {
+		_ = pythonCompatAppendJSON("comments", it)
+	}
+	return n, nil
 }
 
 func AppendUniqueGlobalCommentsCSV(items []any, keyFn func(any) (string, error), header []string, rowFn func(any) ([]string, error)) (int, error) {

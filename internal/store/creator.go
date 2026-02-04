@@ -23,5 +23,9 @@ func SaveCreatorProfile(secUserID string, profile any) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, b, 0644)
+	if err := os.WriteFile(path, b, 0644); err != nil {
+		return err
+	}
+	_ = pythonCompatAppendJSON("creators", profile)
+	return nil
 }

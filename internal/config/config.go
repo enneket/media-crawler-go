@@ -56,6 +56,7 @@ type Config struct {
 	CrawlerMaxComments   int    `mapstructure:"CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES"`
 	EnableGetSubComments bool   `mapstructure:"ENABLE_GET_SUB_COMMENTS"`
 	CrawlerMaxSleepSec   int    `mapstructure:"CRAWLER_MAX_SLEEP_SEC"`
+	PythonCompatOutput   bool   `mapstructure:"PYTHON_COMPAT_OUTPUT"`
 
 	// XHS Specific
 	SortType             string   `mapstructure:"SORT_TYPE"`
@@ -144,6 +145,7 @@ func LoadConfig(path string) error {
 	viper.SetDefault("ENABLE_GET_COMMENTS", true)
 	viper.SetDefault("CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES", 10)
 	viper.SetDefault("CRAWLER_MAX_SLEEP_SEC", 2)
+	viper.SetDefault("PYTHON_COMPAT_OUTPUT", false)
 	viper.SetDefault("SORT_TYPE", "popularity_descending")
 	viper.SetDefault("BILI_CREATOR_ID_LIST", []string{})
 	viper.SetDefault("BILI_SEARCH_MODE", "video")

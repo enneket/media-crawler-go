@@ -5,6 +5,8 @@ LOGIN_TYPE: "cookie" # qrcode | phone | cookie
 LOGIN_WAIT_TIMEOUT_SEC: 120
 # Output
 DATA_DIR: "data"
+# Python compatibility output (optional): write data/{platform}/json/{crawler_type}_{item_type}_{date}.json as JSON array
+PYTHON_COMPAT_OUTPUT: false
 # Storage
 STORE_BACKEND: "file" # file | sqlite | mysql | postgres | mongodb
 SQLITE_PATH: "data/media_crawler.db"

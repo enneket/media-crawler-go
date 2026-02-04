@@ -55,7 +55,7 @@
 
 ### 存储/落盘格式
 - [x] 兼容 Python 的 `SAVE_DATA_OPTION=excel`（已支持 excel 作为 xlsx 别名，并在 /config/options 暴露 excel）。
-- [ ] 对齐（或明确文档差异）JSON 输出语义与目录结构：Python 的 json 为“数组写回 + data/{platform}/json/…”；Go 当前为“逐行追加 JSON + data/{platform}/notes/<note_id>/… 及全局文件”。
+- [x] 对齐（或明确文档差异）JSON 输出语义与目录结构：新增 `PYTHON_COMPAT_OUTPUT=true` 时输出“数组写回 + data/{platform}/json/...”，默认仍保留 Go 的 per-note/jsonl 结构。
 
 ### 词云触发方式
 - [ ] 评估是否提供“任务结束自动生成词云”的能力（Python 在 json 模式会自动生成；Go 当前通过 /data/wordcloud 手动触发）。
@@ -73,5 +73,5 @@
 - [x] T-201 补齐评论抓取的平台覆盖：zhihu/kuaishou（bilibili/weibo/tieba 已完成）。
 - [x] T-202 补齐 weibo/bilibili 的媒体下载（并统一文件命名与重试策略）。
 - [x] T-203 兼容 save_data_option：接受 excel 作为 xlsx 的别名，并同步更新文档与 /config/options。
-- [ ] T-204 增加 Python 兼容输出模式（JSON 数组 + data/{platform}/{file_type}/命名规则）。
+- [x] T-204 增加 Python 兼容输出模式（JSON 数组 + data/{platform}/{file_type}/命名规则）。
 - [ ] T-205 可选：任务结束自动生成词云（对齐 Python 行为，可通过开关控制）。
