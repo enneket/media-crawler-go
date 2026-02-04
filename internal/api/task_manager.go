@@ -119,8 +119,16 @@ func (m *TaskManager) Run(req RunRequest) error {
 
 	go func() {
 		res, err := m.runFn(ctx)
+		cfgSnapshot := config.AppConfig
+		auto := cfgSnapshot.EnableGetWordcloud && cfgSnapshot.EnableGetComments && ctx.Err() == nil
+		autoOpts := autoWordcloudOptions{
+			DataDir:      cfgSnapshot.DataDir,
+			Platform:     cfgSnapshot.Platform,
+			StoreBackend: cfgSnapshot.StoreBackend,
+			SQLitePath:   cfgSnapshot.SQLitePath,
+		}
+
 		m.mu.Lock()
-		defer m.mu.Unlock()
 		m.cancel = nil
 		m.status.State = "idle"
 		m.status.FinishedAt = time.Now().Unix()
@@ -148,6 +156,13 @@ func (m *TaskManager) Run(req RunRequest) error {
 			m.status.LastRiskHint = ""
 			m.status.LastErrorURL = ""
 			m.status.LastHTTPStatus = 0
+		}
+		m.mu.Unlock()
+
+		if auto {
+			go func() {
+				_, _ = autoGenerateWordcloud(autoOpts)
+			}()
 		}
 	}()
 	return nil

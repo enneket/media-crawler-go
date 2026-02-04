@@ -38,6 +38,7 @@ Notes:
 - Proxy: set `ENABLE_IP_PROXY: true`. `IP_PROXY_PROVIDER_NAME` supports `kuaidaili`, `wandouhttp`, and `static` (use `IP_PROXY_LIST` or `IP_PROXY_FILE`).
 - `SAVE_DATA_OPTION`: `json` / `csv` / `xlsx` (`excel` is accepted as an alias for Python compatibility).
 - `PYTHON_COMPAT_OUTPUT: true` will additionally write Python-style JSON arrays to `data/<platform>/json/<crawler_type>_<item_type>_<date>.json`.
+- `ENABLE_GET_WORDCLOUD: true` will auto-generate `wordcloud_comments_*.svg` after the task finishes (best-effort).
 
 ## Output
 

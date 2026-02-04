@@ -33,6 +33,8 @@ IP_PROXY_PROVIDER_NAME: "kuaidaili"
 ENABLE_GET_COMMENTS: true
 ENABLE_GET_SUB_COMMENTS: false
 CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES: 50
+# Wordcloud (optional): auto generate after task finished (best-effort)
+ENABLE_GET_WORDCLOUD: false
 # Medias
 ENABLE_GET_MEDIAS: false
 # Creator (optional)

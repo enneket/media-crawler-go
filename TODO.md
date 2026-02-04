@@ -74,4 +74,4 @@
 - [x] T-202 补齐 weibo/bilibili 的媒体下载（并统一文件命名与重试策略）。
 - [x] T-203 兼容 save_data_option：接受 excel 作为 xlsx 的别名，并同步更新文档与 /config/options。
 - [x] T-204 增加 Python 兼容输出模式（JSON 数组 + data/{platform}/{file_type}/命名规则）。
-- [ ] T-205 可选：任务结束自动生成词云（对齐 Python 行为，可通过开关控制）。
+- [x] T-205 任务结束自动生成词云（对齐 Python 行为，可通过开关控制）。
