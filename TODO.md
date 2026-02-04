@@ -92,7 +92,7 @@
 
 ### 评论稳定性
 - [x] 知乎评论全量翻页（best-effort）：优先走知乎 v4 评论 API 翻页（paging.next），失败回退 HTML 初始数据解析；支持子评论分页（best-effort）。
-- [ ] 快手评论全量翻页：从“HTML 初始数据”升级为可稳定翻页的抓取链路。
+- [x] 快手评论全量翻页（best-effort）：优先走 GraphQL 评论接口翻页（pcursor），失败回退 HTML 初始数据解析；支持子评论 subCommentList 翻页（best-effort）。
 
 ### 媒体下载稳定性
 - [x] B 站下载稳定性增强（best-effort）：下载限并发、指数退避+抖动，避免瞬时并发触发 429/风控。
@@ -128,7 +128,7 @@
 - [x] T-403 词云对齐：支持停用词/自定义词/更合理中文分词（best-effort），并补齐 PNG/词频输出。
 - [x] T-404 CLI 覆盖对齐：补齐评论/子评论/Headless/CDP/词云等运行开关的 CLI 覆盖。
 - [x] T-501 知乎评论全量翻页与稳定抓取（best-effort）。
-- [ ] T-502 快手评论全量翻页与稳定抓取。
+- [x] T-502 快手评论全量翻页与稳定抓取（best-effort）。
 - [x] T-503 媒体下载稳定性增强：B 站/微博（best-effort）。
 - [x] T-504 Stealth 强度增强（best-effort）：支持配置完整 stealth.min.js 注入与路径解析增强。
 - [x] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化（best-effort）。
