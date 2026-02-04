@@ -14,11 +14,26 @@ import (
 )
 
 type Crawler struct {
-	client *Client
+	client apiClient
 }
 
 func NewCrawler() *Crawler {
 	return &Crawler{client: NewClient()}
+}
+
+func NewCrawlerWithClient(client apiClient) *Crawler {
+	if client == nil {
+		client = NewClient()
+	}
+	return &Crawler{client: client}
+}
+
+type apiClient interface {
+	Show(context.Context, string) (ShowResponse, error)
+	SearchByKeyword(context.Context, string, int, string) (GetIndexResponse, error)
+	CreatorInfo(context.Context, string) (GetIndexResponse, error)
+	NotesByCreator(context.Context, string, string, string) (GetIndexResponse, error)
+	GetNoteComments(context.Context, string, int64, int) (hotflowData, error)
 }
 
 func (c *Crawler) Run(ctx context.Context, req crawler.Request) (crawler.Result, error) {
@@ -63,22 +78,7 @@ func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.R
 			logger.Warn("skip invalid weibo input", "value", input, "err", err)
 			return crawler.Error{Kind: crawler.ErrorKindInvalidInput, Platform: req.Platform, Msg: "invalid weibo input", Err: err}
 		}
-		res, err := c.client.Show(ctx, id)
-		if err != nil {
-			logger.Error("fetch status failed", "note_id", noteID, "err", err)
-			return err
-		}
-		var data any
-		if err := json.Unmarshal(res.Data, &data); err != nil {
-			logger.Error("decode status data failed", "note_id", noteID, "err", err)
-			return err
-		}
-		if err := store.SaveNoteDetail(noteID, data); err != nil {
-			logger.Error("save note failed", "note_id", noteID, "err", err)
-			return err
-		}
-		logger.Info("note saved", "note_id", noteID)
-		return nil
+		return c.fetchAndSaveStatus(ctx, id, noteID)
 	})
 	out := crawler.NewResult(req)
 	out.Processed = itemRes.Processed
@@ -87,6 +87,145 @@ func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.R
 	out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, itemRes.FailureKinds)
 	out.FinishedAt = time.Now().Unix()
 	return out, nil
+}
+
+func (c *Crawler) fetchAndSaveStatus(ctx context.Context, id string, noteID string) error {
+	res, err := c.client.Show(ctx, id)
+	if err != nil {
+		logger.Error("fetch status failed", "note_id", noteID, "err", err)
+		return err
+	}
+	var data any
+	if err := json.Unmarshal(res.Data, &data); err != nil {
+		logger.Error("decode status data failed", "note_id", noteID, "err", err)
+		return err
+	}
+	if err := store.SaveNoteDetail(noteID, data); err != nil {
+		logger.Error("save note failed", "note_id", noteID, "err", err)
+		return err
+	}
+	logger.Info("note saved", "note_id", noteID)
+
+	if !config.AppConfig.EnableGetComments {
+		return nil
+	}
+	comments, err := fetchAllNoteComments(
+		ctx,
+		c.client,
+		noteID,
+		config.AppConfig.CrawlerMaxComments,
+		config.AppConfig.CrawlerMaxSleepSec,
+		config.AppConfig.EnableGetSubComments,
+	)
+	if err != nil {
+		logger.Error("fetch weibo comments failed", "note_id", noteID, "err", err)
+		return nil
+	}
+	if len(comments) == 0 {
+		return nil
+	}
+
+	switch config.AppConfig.SaveDataOption {
+	case "csv":
+		items := make([]any, 0, len(comments))
+		globalItems := make([]any, 0, len(comments))
+		for i := range comments {
+			items = append(items, &comments[i])
+			globalItems = append(globalItems, &store.UnifiedComment{
+				Platform:        "weibo",
+				NoteID:          noteID,
+				CommentID:       comments[i].CommentID,
+				ParentCommentID: comments[i].ParentCommentID,
+				Content:         comments[i].Content,
+				CreateTime:      comments[i].CreateTime,
+				LikeCount:       comments[i].LikeCount,
+				UserID:          comments[i].UserID,
+				UserNickname:    comments[i].UserNickname,
+			})
+		}
+		if _, err := store.AppendUniqueCommentsCSV(
+			noteID,
+			items,
+			func(item any) (string, error) { return item.(*Comment).CommentID, nil },
+			(Comment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save weibo comments csv failed", "note_id", noteID, "err", err)
+		}
+		if _, err := store.AppendUniqueGlobalCommentsCSV(
+			globalItems,
+			func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+			(&store.UnifiedComment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save weibo global comments csv failed", "note_id", noteID, "err", err)
+		}
+	case "xlsx":
+		items := make([]any, 0, len(comments))
+		globalItems := make([]any, 0, len(comments))
+		for i := range comments {
+			items = append(items, &comments[i])
+			globalItems = append(globalItems, &store.UnifiedComment{
+				Platform:        "weibo",
+				NoteID:          noteID,
+				CommentID:       comments[i].CommentID,
+				ParentCommentID: comments[i].ParentCommentID,
+				Content:         comments[i].Content,
+				CreateTime:      comments[i].CreateTime,
+				LikeCount:       comments[i].LikeCount,
+				UserID:          comments[i].UserID,
+				UserNickname:    comments[i].UserNickname,
+			})
+		}
+		if _, err := store.AppendUniqueCommentsXLSX(
+			noteID,
+			items,
+			func(item any) (string, error) { return item.(*Comment).CommentID, nil },
+			(Comment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save weibo comments xlsx failed", "note_id", noteID, "err", err)
+		}
+		if _, err := store.AppendUniqueGlobalCommentsXLSX(
+			globalItems,
+			func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+			(&store.UnifiedComment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save weibo global comments xlsx failed", "note_id", noteID, "err", err)
+		}
+	default:
+		items := make([]any, 0, len(comments))
+		globalItems := make([]any, 0, len(comments))
+		for i := range comments {
+			items = append(items, comments[i])
+			globalItems = append(globalItems, &store.UnifiedComment{
+				Platform:        "weibo",
+				NoteID:          noteID,
+				CommentID:       comments[i].CommentID,
+				ParentCommentID: comments[i].ParentCommentID,
+				Content:         comments[i].Content,
+				CreateTime:      comments[i].CreateTime,
+				LikeCount:       comments[i].LikeCount,
+				UserID:          comments[i].UserID,
+				UserNickname:    comments[i].UserNickname,
+			})
+		}
+		if _, err := store.AppendUniqueCommentsJSONL(
+			noteID,
+			items,
+			func(item any) (string, error) { return item.(Comment).CommentID, nil },
+		); err != nil {
+			logger.Error("save weibo comments jsonl failed", "note_id", noteID, "err", err)
+		}
+		if _, err := store.AppendUniqueGlobalCommentsJSONL(
+			globalItems,
+			func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+		); err != nil {
+			logger.Error("save weibo global comments jsonl failed", "note_id", noteID, "err", err)
+		}
+	}
+	return nil
 }
 
 func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.Result, error) {
@@ -139,15 +278,7 @@ func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.R
 				break
 			}
 			itemRes := crawler.ForEachLimit(ctx, ids, limit, func(ctx context.Context, id string) error {
-				show, err := c.client.Show(ctx, id)
-				if err != nil {
-					return err
-				}
-				var v any
-				if err := json.Unmarshal(show.Data, &v); err != nil {
-					return err
-				}
-				return store.SaveNoteDetail(id, v)
+				return c.fetchAndSaveStatus(ctx, id, id)
 			})
 			out.Processed += itemRes.Processed
 			out.Succeeded += itemRes.Succeeded
@@ -229,15 +360,7 @@ func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.
 				break
 			}
 			itemRes := crawler.ForEachLimit(ctx, ids, limit, func(ctx context.Context, id string) error {
-				show, err := c.client.Show(ctx, id)
-				if err != nil {
-					return err
-				}
-				var v any
-				if err := json.Unmarshal(show.Data, &v); err != nil {
-					return err
-				}
-				return store.SaveNoteDetail(id, v)
+				return c.fetchAndSaveStatus(ctx, id, id)
 			})
 			out.Processed += itemRes.Processed
 			out.Succeeded += itemRes.Succeeded
