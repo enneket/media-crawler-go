@@ -202,3 +202,41 @@ func (c *Client) ListUpVideos(ctx context.Context, mid string, page int, pageSiz
 	}
 	return out, nil
 }
+
+type PlayURLResponse struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func (c *Client) GetPlayURL(ctx context.Context, aid int64, cid int64, qn int) (PlayURLResponse, error) {
+	if aid <= 0 || cid <= 0 {
+		return PlayURLResponse{}, fmt.Errorf("invalid aid/cid")
+	}
+	if qn <= 0 {
+		qn = 80
+	}
+	var out PlayURLResponse
+	resp, err := c.httpClient.R().
+		SetContext(ctx).
+		SetQueryParams(map[string]string{
+			"avid":     strconv.FormatInt(aid, 10),
+			"cid":      strconv.FormatInt(cid, 10),
+			"qn":       strconv.Itoa(qn),
+			"fourk":    "1",
+			"fnval":    "1",
+			"platform": "pc",
+		}).
+		SetResult(&out).
+		Get("/x/player/playurl")
+	if err != nil {
+		return PlayURLResponse{}, err
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return PlayURLResponse{}, crawler.NewHTTPStatusError("bilibili", "/x/player/playurl", resp.StatusCode(), resp.String())
+	}
+	if out.Code != 0 {
+		return PlayURLResponse{}, fmt.Errorf("bilibili api error: code=%d message=%s", out.Code, out.Message)
+	}
+	return out, nil
+}

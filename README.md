@@ -94,7 +94,7 @@ go run cmd/media-crawler/main.go
 - [x] Signature Generation (X-S, X-T, X-S-Common) using Playwright
 - [x] Persistent Browser Context (Login state saving)
 - [x] Comment Crawling (pagination, optional sub-comments, currently for xhs/douyin/bilibili/weibo/tieba/zhihu/kuaishou)
-- [x] Media Download (basic, currently for xhs/douyin)
+- [x] Media Download (basic, currently for xhs/douyin/weibo/bilibili)
 - [x] CDP Mode (connect over remote debugging)
 - [x] Proxy Pool (kuaidaili / wandouhttp / static list)
 - [x] Store Backends (file/sqlite/mysql/postgres/mongodb)

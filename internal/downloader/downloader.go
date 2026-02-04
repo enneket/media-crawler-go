@@ -73,7 +73,7 @@ func (d *Downloader) download(url, filename string, headers map[string]string) e
 
 		func() {
 			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 				lastErr = crawler.NewHTTPStatusError("downloader", url, resp.StatusCode, "")
 				return
 			}

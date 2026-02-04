@@ -29,7 +29,7 @@
 
 ### 评论 / 媒体
 - [x] 评论抓取：目前覆盖 xhs / douyin / bilibili / weibo / tieba / zhihu / kuaishou（支持分页；douyin/xhs/bilibili/weibo/tieba 支持二级评论开关；zhihu/kuaishou 为 HTML 初始数据 best-effort）。
-- [x] 媒体下载：目前覆盖 xhs / douyin（ENABLE_GET_MEDIAS=true 时下载到 note/media）。
+- [x] 媒体下载：目前覆盖 xhs / douyin / weibo / bilibili（ENABLE_GET_MEDIAS=true 时下载到 note/media；weibo/bilibili 为 best-effort）。
 
 ### 测试
 - [x] 平台注册/别名测试与多平台 replay 测试。
@@ -51,7 +51,7 @@
 - [x] 补齐评论抓取的平台覆盖：zhihu / kuaishou（已补齐；当前为 HTML 初始数据 best-effort，后续如需“全量翻页”再补稳定评论 API）。
 
 ### 媒体下载覆盖
-- [ ] 补齐媒体下载的平台覆盖：weibo / bilibili（Python 已覆盖；Go 目前仅 xhs/douyin）。
+- [x] 补齐媒体下载的平台覆盖：weibo / bilibili（已补齐；当前为 best-effort，bilibili 视频下载依赖 /x/player/playurl 可用性）。
 
 ### 存储/落盘格式
 - [x] 兼容 Python 的 `SAVE_DATA_OPTION=excel`（已支持 excel 作为 xlsx 别名，并在 /config/options 暴露 excel）。
@@ -71,7 +71,7 @@
 - [x] T-105 代理供应商按需扩展：新增 static provider 支持自定义代理列表/文件。
 - [x] T-106 增加 HTTP 形态的日志查询：提供最近 N 条日志缓存接口。
 - [x] T-201 补齐评论抓取的平台覆盖：zhihu/kuaishou（bilibili/weibo/tieba 已完成）。
-- [ ] T-202 补齐 weibo/bilibili 的媒体下载（并统一文件命名与重试策略）。
+- [x] T-202 补齐 weibo/bilibili 的媒体下载（并统一文件命名与重试策略）。
 - [x] T-203 兼容 save_data_option：接受 excel 作为 xlsx 的别名，并同步更新文档与 /config/options。
 - [ ] T-204 增加 Python 兼容输出模式（JSON 数组 + data/{platform}/{file_type}/命名规则）。
 - [ ] T-205 可选：任务结束自动生成词云（对齐 Python 行为，可通过开关控制）。

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
+	"media-crawler-go/internal/downloader"
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/store"
 	"strconv"
@@ -107,6 +108,9 @@ func (c *Crawler) fetchAndSaveStatus(ctx context.Context, id string, noteID stri
 	logger.Info("note saved", "note_id", noteID)
 
 	if !config.AppConfig.EnableGetComments {
+		if config.AppConfig.EnableGetMedias {
+			c.downloadMedias(noteID, data)
+		}
 		return nil
 	}
 	comments, err := fetchAllNoteComments(
@@ -225,7 +229,27 @@ func (c *Crawler) fetchAndSaveStatus(ctx context.Context, id string, noteID stri
 			logger.Error("save weibo global comments jsonl failed", "note_id", noteID, "err", err)
 		}
 	}
+
+	if config.AppConfig.EnableGetMedias {
+		c.downloadMedias(noteID, data)
+	}
 	return nil
+}
+
+func (c *Crawler) downloadMedias(noteID string, data any) {
+	urls, filenames := ExtractWeiboMediaURLs(noteID, data)
+	if len(urls) == 0 {
+		return
+	}
+	headers := map[string]string{
+		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+		"Referer":    fmt.Sprintf("https://m.weibo.cn/detail/%s", noteID),
+	}
+	if ck := strings.TrimSpace(config.AppConfig.Cookies); ck != "" {
+		headers["Cookie"] = ck
+	}
+	d := downloader.NewDownloader(store.NoteMediaDir(noteID))
+	_ = d.BatchDownloadWithHeaders(urls, filenames, headers)
 }
 
 func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.Result, error) {
