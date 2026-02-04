@@ -99,7 +99,7 @@
 - [x] 微博下载稳定性增强（best-effort）：下载限并发、指数退避+抖动，并识别 text/html 或 json 响应避免落地垃圾文件。
 
 ### 反检测强度
-- [ ] 支持注入完整 stealth.min.js：支持通过配置指定脚本路径（默认 best-effort 脚本），便于对齐 Python 版注入策略。
+- [x] 支持注入完整 stealth.min.js（best-effort）：支持通过配置指定脚本路径/目录（默认 best-effort 内置脚本），并自动探测 `libs/stealth.min.js`。
 
 ### Excel 导出体验
 - [x] Excel 单文件多 Sheet（best-effort）：新增 `SAVE_DATA_OPTION=excel` 映射为 `xlsx_book`，输出单个 workbook（Contents/Comments/Creators），含表头样式/冻结首行/自动列宽。
@@ -130,6 +130,6 @@
 - [ ] T-501 知乎评论全量翻页与稳定抓取。
 - [ ] T-502 快手评论全量翻页与稳定抓取。
 - [x] T-503 媒体下载稳定性增强：B 站/微博（best-effort）。
-- [ ] T-504 Stealth 强度增强：支持配置完整 stealth.min.js 注入。
+- [x] T-504 Stealth 强度增强（best-effort）：支持配置完整 stealth.min.js 注入与路径解析增强。
 - [x] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化（best-effort）。
 - [x] T-506 存储语义对齐（best-effort）：补充 README 与 /config/options 说明，明确 STORE_BACKEND（是否写 DB）与 SAVE_DATA_OPTION（文件格式）职责边界，并增加 xlsx_book/excel 的解释。
