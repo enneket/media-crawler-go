@@ -36,10 +36,11 @@ Notes:
 - If `HEADLESS: true`, you must use `LOGIN_TYPE: cookie` and provide `COOKIES`.
 - `LOGIN_TYPE: qrcode/phone` relies on completing login manually in the opened browser window; the crawler waits up to `LOGIN_WAIT_TIMEOUT_SEC`. If `LOGIN_TYPE: phone` and `LOGIN_PHONE` is set, it will try to prefill the phone input (best-effort).
 - Proxy: set `ENABLE_IP_PROXY: true`. `IP_PROXY_PROVIDER_NAME` supports `kuaidaili`, `wandouhttp`, and `static` (use `IP_PROXY_LIST` or `IP_PROXY_FILE`).
+- `SAVE_DATA_OPTION`: `json` / `csv` / `xlsx` (`excel` is accepted as an alias for Python compatibility).
 
 ## Output
 
-- Notes: `data/<platform>/notes/<note_id>/note.(json|csv)`
+- Notes: `data/<platform>/notes/<note_id>/note.(json|csv|xlsx)`
 - Comments: `data/<platform>/notes/<note_id>/comments.(jsonl|csv|xlsx)` (deduped via `comments.idx`, xlsx currently for xhs/douyin)
 - Global Comments: `data/<platform>/comments.(jsonl|csv|xlsx)` (unified schema, deduped via `comments.global.idx`, currently for xhs/douyin)
 - Media: `data/<platform>/notes/<note_id>/media/*`
@@ -92,8 +93,8 @@ go run cmd/media-crawler/main.go
 - [x] Kuaishou Crawling (search/detail/creator)
 - [x] Signature Generation (X-S, X-T, X-S-Common) using Playwright
 - [x] Persistent Browser Context (Login state saving)
-- [x] Comment Crawling (pagination, optional sub-comments)
-- [x] Media Download (basic)
+- [x] Comment Crawling (pagination, optional sub-comments, currently for xhs/douyin/bilibili)
+- [x] Media Download (basic, currently for xhs/douyin)
 - [x] CDP Mode (connect over remote debugging)
 - [x] Proxy Pool (kuaidaili / wandouhttp / static list)
 - [x] Store Backends (file/sqlite/mysql/postgres/mongodb)

@@ -167,7 +167,11 @@ func LoadConfig(path string) error {
 		}
 	}
 
-	return viper.Unmarshal(&AppConfig)
+	if err := viper.Unmarshal(&AppConfig); err != nil {
+		return err
+	}
+	Normalize(&AppConfig)
+	return nil
 }
 
 func GetKeywords() []string {
@@ -175,4 +179,17 @@ func GetKeywords() []string {
 		return []string{}
 	}
 	return strings.Split(AppConfig.Keywords, ",")
+}
+
+func Normalize(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+	cfg.SaveDataOption = strings.ToLower(strings.TrimSpace(cfg.SaveDataOption))
+	if cfg.SaveDataOption == "excel" {
+		cfg.SaveDataOption = "xlsx"
+	}
+	cfg.StoreBackend = strings.ToLower(strings.TrimSpace(cfg.StoreBackend))
+	cfg.CrawlerType = strings.ToLower(strings.TrimSpace(cfg.CrawlerType))
+	cfg.LoginType = strings.ToLower(strings.TrimSpace(cfg.LoginType))
 }

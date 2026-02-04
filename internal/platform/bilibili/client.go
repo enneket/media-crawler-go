@@ -32,6 +32,9 @@ func NewClient() *Client {
 		"referer":         "https://www.bilibili.com/",
 		"user-agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 	})
+	if ck := strings.TrimSpace(config.AppConfig.Cookies); ck != "" {
+		rc.SetHeader("cookie", ck)
+	}
 
 	retryCount := config.AppConfig.HttpRetryCount
 	if retryCount <= 0 {

@@ -100,6 +100,7 @@ func (m *TaskManager) Run(req RunRequest) error {
 
 	nextCfg := config.AppConfig
 	applyRunRequestToConfig(&nextCfg, req)
+	config.Normalize(&nextCfg)
 	if err := validateRunConfig(nextCfg); err != nil {
 		m.mu.Unlock()
 		return err
@@ -252,10 +253,10 @@ func validateRunConfig(cfg config.Config) error {
 		crawlerType = "search"
 	}
 
-	if v := strings.ToLower(strings.TrimSpace(cfg.StoreBackend)); v != "" && v != "file" && v != "sqlite" && v != "mysql" && v != "postgres" {
+	if v := strings.ToLower(strings.TrimSpace(cfg.StoreBackend)); v != "" && v != "file" && v != "sqlite" && v != "mysql" && v != "postgres" && v != "mongodb" {
 		return ValidationError{Msg: fmt.Sprintf("invalid store_backend: %s", cfg.StoreBackend)}
 	}
-	if v := strings.ToLower(strings.TrimSpace(cfg.SaveDataOption)); v != "" && v != "json" && v != "csv" && v != "xlsx" {
+	if v := strings.ToLower(strings.TrimSpace(cfg.SaveDataOption)); v != "" && v != "json" && v != "csv" && v != "xlsx" && v != "excel" {
 		return ValidationError{Msg: fmt.Sprintf("invalid save_data_option: %s", cfg.SaveDataOption)}
 	}
 

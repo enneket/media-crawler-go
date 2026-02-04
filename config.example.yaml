@@ -8,6 +8,7 @@ DATA_DIR: "data"
 # Storage
 STORE_BACKEND: "file" # file | sqlite | mysql | postgres | mongodb
 SQLITE_PATH: "data/media_crawler.db"
+SAVE_DATA_OPTION: "json" # json | csv | xlsx | excel
 MONGO_URI: "" # e.g. mongodb://127.0.0.1:27017
 MONGO_DB: "media_crawler"
 # Logging

@@ -77,22 +77,7 @@ func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.R
 			logger.Warn("skip invalid bilibili input", "value", input, "err", err)
 			return crawler.Error{Kind: crawler.ErrorKindInvalidInput, Platform: req.Platform, Msg: "invalid bilibili input", Err: err}
 		}
-		res, err := c.client.GetView(ctx, bvid, aid)
-		if err != nil {
-			logger.Error("fetch view failed", "note_id", noteID, "err", err)
-			return err
-		}
-		var data any
-		if err := json.Unmarshal(res.Data, &data); err != nil {
-			logger.Error("decode view data failed", "note_id", noteID, "err", err)
-			return err
-		}
-		if err := store.SaveNoteDetail(noteID, data); err != nil {
-			logger.Error("save note failed", "note_id", noteID, "err", err)
-			return err
-		}
-		logger.Info("note saved", "note_id", noteID)
-		return nil
+		return c.fetchAndSaveVideo(ctx, bvid, aid, noteID)
 	})
 	out := crawler.NewResult(req)
 	out.Processed = itemRes.Processed
@@ -101,6 +86,164 @@ func (c *Crawler) runDetail(ctx context.Context, req crawler.Request) (crawler.R
 	out.FailureKinds = crawler.MergeFailureKinds(out.FailureKinds, itemRes.FailureKinds)
 	out.FinishedAt = time.Now().Unix()
 	return out, nil
+}
+
+func (c *Crawler) fetchAndSaveVideo(ctx context.Context, bvid string, aid int64, noteID string) error {
+	res, err := c.client.GetView(ctx, bvid, aid)
+	if err != nil {
+		logger.Error("fetch view failed", "note_id", noteID, "err", err)
+		return err
+	}
+	var data any
+	if err := json.Unmarshal(res.Data, &data); err != nil {
+		logger.Error("decode view data failed", "note_id", noteID, "err", err)
+		return err
+	}
+	if err := store.SaveNoteDetail(noteID, data); err != nil {
+		logger.Error("save note failed", "note_id", noteID, "err", err)
+		return err
+	}
+	logger.Info("note saved", "note_id", noteID)
+
+	if !config.AppConfig.EnableGetComments {
+		return nil
+	}
+
+	cc, ok := c.client.(commentClient)
+	if !ok {
+		return nil
+	}
+
+	oid := aid
+	if oid <= 0 {
+		oid = extractAIDFromViewData(data)
+	}
+	if oid <= 0 {
+		logger.Warn("skip bilibili comments due to missing oid", "note_id", noteID)
+		return nil
+	}
+
+	comments, err := fetchAllVideoComments(
+		ctx,
+		cc,
+		oid,
+		config.AppConfig.CrawlerMaxComments,
+		config.AppConfig.CrawlerMaxSleepSec,
+		config.AppConfig.EnableGetSubComments,
+	)
+	if err != nil {
+		logger.Error("fetch bilibili comments failed", "note_id", noteID, "oid", oid, "err", err)
+		return nil
+	}
+	if len(comments) == 0 {
+		return nil
+	}
+
+	switch config.AppConfig.SaveDataOption {
+	case "csv":
+		items := make([]any, 0, len(comments))
+		globalItems := make([]any, 0, len(comments))
+		for i := range comments {
+			comments[i].NoteID = noteID
+			items = append(items, &comments[i])
+			globalItems = append(globalItems, &store.UnifiedComment{
+				Platform:        "bilibili",
+				NoteID:          noteID,
+				CommentID:       comments[i].CommentID,
+				ParentCommentID: comments[i].ParentCommentID,
+				Content:         comments[i].Content,
+				CreateTime:      comments[i].CreateTime,
+				LikeCount:       int64(comments[i].LikeCount),
+				UserID:          comments[i].UserID,
+				UserNickname:    comments[i].UserNickname,
+			})
+		}
+		if _, err := store.AppendUniqueCommentsCSV(
+			noteID,
+			items,
+			func(item any) (string, error) { return item.(*Comment).CommentID, nil },
+			(Comment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save bilibili comments csv failed", "note_id", noteID, "err", err)
+		}
+		if _, err := store.AppendUniqueGlobalCommentsCSV(
+			globalItems,
+			func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+			(&store.UnifiedComment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save bilibili global comments csv failed", "note_id", noteID, "err", err)
+		}
+	case "xlsx":
+		items := make([]any, 0, len(comments))
+		globalItems := make([]any, 0, len(comments))
+		for i := range comments {
+			comments[i].NoteID = noteID
+			items = append(items, &comments[i])
+			globalItems = append(globalItems, &store.UnifiedComment{
+				Platform:        "bilibili",
+				NoteID:          noteID,
+				CommentID:       comments[i].CommentID,
+				ParentCommentID: comments[i].ParentCommentID,
+				Content:         comments[i].Content,
+				CreateTime:      comments[i].CreateTime,
+				LikeCount:       int64(comments[i].LikeCount),
+				UserID:          comments[i].UserID,
+				UserNickname:    comments[i].UserNickname,
+			})
+		}
+		if _, err := store.AppendUniqueCommentsXLSX(
+			noteID,
+			items,
+			func(item any) (string, error) { return item.(*Comment).CommentID, nil },
+			(Comment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save bilibili comments xlsx failed", "note_id", noteID, "err", err)
+		}
+		if _, err := store.AppendUniqueGlobalCommentsXLSX(
+			globalItems,
+			func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+			(&store.UnifiedComment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save bilibili global comments xlsx failed", "note_id", noteID, "err", err)
+		}
+	default:
+		items := make([]any, 0, len(comments))
+		globalItems := make([]any, 0, len(comments))
+		for i := range comments {
+			comments[i].NoteID = noteID
+			items = append(items, comments[i])
+			globalItems = append(globalItems, &store.UnifiedComment{
+				Platform:        "bilibili",
+				NoteID:          noteID,
+				CommentID:       comments[i].CommentID,
+				ParentCommentID: comments[i].ParentCommentID,
+				Content:         comments[i].Content,
+				CreateTime:      comments[i].CreateTime,
+				LikeCount:       int64(comments[i].LikeCount),
+				UserID:          comments[i].UserID,
+				UserNickname:    comments[i].UserNickname,
+			})
+		}
+		if _, err := store.AppendUniqueCommentsJSONL(
+			noteID,
+			items,
+			func(item any) (string, error) { return item.(Comment).CommentID, nil },
+		); err != nil {
+			logger.Error("save bilibili comments jsonl failed", "note_id", noteID, "err", err)
+		}
+		if _, err := store.AppendUniqueGlobalCommentsJSONL(
+			globalItems,
+			func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+		); err != nil {
+			logger.Error("save bilibili global comments jsonl failed", "note_id", noteID, "err", err)
+		}
+	}
+
+	return nil
 }
 
 func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.Result, error) {
@@ -149,15 +292,7 @@ func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.R
 				break
 			}
 			itemRes := crawler.ForEachLimit(ctx, videos, limit, func(ctx context.Context, v videoRef) error {
-				view, err := c.client.GetView(ctx, v.BVID, v.AID)
-				if err != nil {
-					return err
-				}
-				var payload any
-				if err := json.Unmarshal(view.Data, &payload); err != nil {
-					return err
-				}
-				return store.SaveNoteDetail(v.NoteID, payload)
+				return c.fetchAndSaveVideo(ctx, v.BVID, v.AID, v.NoteID)
 			})
 			out.Processed += itemRes.Processed
 			out.Succeeded += itemRes.Succeeded
@@ -231,15 +366,7 @@ func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.
 				break
 			}
 			itemRes := crawler.ForEachLimit(ctx, videos, limit, func(ctx context.Context, v videoRef) error {
-				view, err := c.client.GetView(ctx, v.BVID, v.AID)
-				if err != nil {
-					return err
-				}
-				var payload any
-				if err := json.Unmarshal(view.Data, &payload); err != nil {
-					return err
-				}
-				return store.SaveNoteDetail(v.NoteID, payload)
+				return c.fetchAndSaveVideo(ctx, v.BVID, v.AID, v.NoteID)
 			})
 			out.Processed += itemRes.Processed
 			out.Succeeded += itemRes.Succeeded
@@ -358,6 +485,14 @@ func extractUpVideos(data map[string]any) []videoRef {
 		out = append(out, videoRef{BVID: bvid, AID: aid, NoteID: noteID})
 	}
 	return out
+}
+
+func extractAIDFromViewData(data any) int64 {
+	m, ok := data.(map[string]any)
+	if !ok {
+		return 0
+	}
+	return toInt64(m["aid"])
 }
 
 func dataGet(m map[string]any, keys ...string) any {
