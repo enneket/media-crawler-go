@@ -29,7 +29,7 @@
 - [x] WebUI：内置静态资源（embed），根路径返回 index.html。
 
 ### 评论 / 媒体
-- [x] 评论抓取：目前覆盖 xhs / douyin / bilibili / weibo / tieba / zhihu / kuaishou（支持分页；douyin/xhs/bilibili/weibo/tieba 支持二级评论开关；zhihu/kuaishou 为 HTML 初始数据 best-effort）。
+- [x] 评论抓取：目前覆盖 xhs / douyin / bilibili / weibo / tieba / zhihu / kuaishou（支持分页；douyin/xhs/bilibili/weibo/tieba/zhihu/kuaishou 支持二级评论开关；zhihu/kuaishou 优先走评论 API 翻页，失败回退 HTML 初始数据 best-effort）。
 - [x] 媒体下载：目前覆盖 xhs / douyin / weibo / bilibili（ENABLE_GET_MEDIAS=true 时下载到 note/media；weibo/bilibili 为 best-effort）。
 
 ### 测试
@@ -51,7 +51,7 @@
 ## 与 Python 版差异（未完成/需确认）
 
 ### 评论覆盖
-- [x] 补齐评论抓取的平台覆盖：zhihu / kuaishou（已补齐；当前为 HTML 初始数据 best-effort，后续如需“全量翻页”再补稳定评论 API）。
+- [x] 补齐评论抓取的平台覆盖：zhihu / kuaishou（已补齐；支持全量翻页 best-effort：优先 API 翻页，失败回退 HTML 初始数据解析）。
 
 ### 媒体下载覆盖
 - [x] 补齐媒体下载的平台覆盖：weibo / bilibili（已补齐；当前为 best-effort，bilibili 视频下载依赖 /x/player/playurl 可用性）。
@@ -105,7 +105,7 @@
 - [x] Excel 单文件多 Sheet（best-effort）：新增 `SAVE_DATA_OPTION=excel` 映射为 `xlsx_book`，输出单个 workbook（Contents/Comments/Creators），含表头样式/冻结首行/自动列宽。
 
 ### 存储语义一致性
-- [ ] 统一/澄清 STORE_BACKEND 与 SAVE_DATA_OPTION：补充文档与 CLI 说明，减少与 Python `SAVE_DATA_OPTION` 的认知差异。
+- [x] 统一/澄清 STORE_BACKEND 与 SAVE_DATA_OPTION（best-effort）：补充文档与 CLI 说明，减少与 Python `SAVE_DATA_OPTION` 的认知差异。
 
 ## 开发任务清单（可执行）
 - [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
