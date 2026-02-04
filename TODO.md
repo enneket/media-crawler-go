@@ -74,7 +74,7 @@
 - [x] 自动词云读取 DB 覆盖：支持 sqlite/mysql/postgres/mongodb（best-effort，读取 comments.data_json 生成词云）。
 
 ### CLI 形态
-- [ ] CLI 参数对齐：补齐 Python 版常用 CLI 覆盖（如 init_db、cookies/inputs/keywords 等直接覆盖配置），或引入子命令体系（run/search/detail/creator）。
+- [x] CLI 参数对齐：支持 init-db 子命令，支持常用参数覆盖（cookies/inputs/keywords 等直接覆盖配置）。
 
 ## 开发任务清单（可执行）
 - [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
@@ -91,4 +91,4 @@
 - [x] T-301 代理供应商对齐：新增 jishu_http provider。
 - [x] T-302 统一代理接入：所有平台 HTTP client 统一走代理池。
 - [x] T-303 词云 DB 覆盖：支持从 mysql/postgres/mongodb 读取评论数据生成词云。
-- [ ] T-304 丰富 CLI：补齐 init_db 与常用参数覆盖/子命令体系。
+- [x] T-304 丰富 CLI：补齐 init_db 与常用参数覆盖/子命令体系。

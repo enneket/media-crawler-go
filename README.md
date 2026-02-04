@@ -87,6 +87,19 @@ Or run directly:
 go run cmd/media-crawler/main.go
 ```
 
+CLI examples:
+
+```bash
+# Run with overrides (no config edit)
+./media-crawler -platform xhs -mode search -keywords "编程副业,编程兼职"
+
+# Detail mode with explicit inputs (meaning depends on platform+mode)
+./media-crawler -platform bilibili -mode detail -inputs "https://www.bilibili.com/video/BV1xxx,https://www.bilibili.com/video/BV2yyy"
+
+# Init DB schema/indexes for SQL backends
+./media-crawler init-db -store_backend sqlite -sqlite_path data/media_crawler.db
+```
+
 ## Features
 
 - [x] Xiaohongshu Crawling (search/detail/creator)
