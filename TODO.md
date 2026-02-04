@@ -95,8 +95,8 @@
 - [ ] 快手评论全量翻页：从“HTML 初始数据”升级为可稳定翻页的抓取链路。
 
 ### 媒体下载稳定性
-- [ ] B 站下载稳定性增强：playurl 鉴权/清晰度选择/失败重试策略进一步完善。
-- [ ] 微博下载稳定性增强：解析与重试策略进一步完善。
+- [x] B 站下载稳定性增强（best-effort）：下载限并发、指数退避+抖动，避免瞬时并发触发 429/风控。
+- [x] 微博下载稳定性增强（best-effort）：下载限并发、指数退避+抖动，并识别 text/html 或 json 响应避免落地垃圾文件。
 
 ### 反检测强度
 - [ ] 支持注入完整 stealth.min.js：支持通过配置指定脚本路径（默认 best-effort 脚本），便于对齐 Python 版注入策略。
@@ -129,7 +129,7 @@
 - [x] T-404 CLI 覆盖对齐：补齐评论/子评论/Headless/CDP/词云等运行开关的 CLI 覆盖。
 - [ ] T-501 知乎评论全量翻页与稳定抓取。
 - [ ] T-502 快手评论全量翻页与稳定抓取。
-- [ ] T-503 媒体下载稳定性增强：B 站/微博。
+- [x] T-503 媒体下载稳定性增强：B 站/微博（best-effort）。
 - [ ] T-504 Stealth 强度增强：支持配置完整 stealth.min.js 注入。
 - [x] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化（best-effort）。
 - [x] T-506 存储语义对齐（best-effort）：补充 README 与 /config/options 说明，明确 STORE_BACKEND（是否写 DB）与 SAVE_DATA_OPTION（文件格式）职责边界，并增加 xlsx_book/excel 的解释。
