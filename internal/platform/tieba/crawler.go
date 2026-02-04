@@ -250,6 +250,122 @@ func (c *Crawler) fetchAndSaveThread(ctx context.Context, platform string, input
 	if riskHint != "" {
 		return crawler.NewRiskHintError(platform, res.URL, riskHint)
 	}
+
+	if config.AppConfig.EnableGetComments && strings.TrimSpace(threadID) != "" {
+		comments, err := fetchAllThreadComments(
+			ctx,
+			c.client,
+			threadID,
+			noteID,
+			config.AppConfig.CrawlerMaxComments,
+			config.AppConfig.CrawlerMaxSleepSec,
+			config.AppConfig.EnableGetSubComments,
+		)
+		if err != nil {
+			logger.Error("tieba fetch comments failed", "note_id", noteID, "thread_id", threadID, "err", err)
+		} else if len(comments) > 0 {
+			switch config.AppConfig.SaveDataOption {
+			case "csv":
+				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, &comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "tieba",
+						NoteID:          noteID,
+						CommentID:       comments[i].CommentID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Content,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].LikeCount,
+						UserID:          comments[i].UserID,
+						UserNickname:    comments[i].UserNickname,
+					})
+				}
+				if _, err := store.AppendUniqueCommentsCSV(
+					noteID,
+					items,
+					func(item any) (string, error) { return item.(*Comment).CommentID, nil },
+					(Comment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+				); err != nil {
+					logger.Error("tieba save comments csv failed", "note_id", noteID, "err", err)
+				}
+				if _, err := store.AppendUniqueGlobalCommentsCSV(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+					(&store.UnifiedComment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+				); err != nil {
+					logger.Error("tieba save global comments csv failed", "note_id", noteID, "err", err)
+				}
+			case "xlsx":
+				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, &comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "tieba",
+						NoteID:          noteID,
+						CommentID:       comments[i].CommentID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Content,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].LikeCount,
+						UserID:          comments[i].UserID,
+						UserNickname:    comments[i].UserNickname,
+					})
+				}
+				if _, err := store.AppendUniqueCommentsXLSX(
+					noteID,
+					items,
+					func(item any) (string, error) { return item.(*Comment).CommentID, nil },
+					(Comment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+				); err != nil {
+					logger.Error("tieba save comments xlsx failed", "note_id", noteID, "err", err)
+				}
+				if _, err := store.AppendUniqueGlobalCommentsXLSX(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+					(&store.UnifiedComment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+				); err != nil {
+					logger.Error("tieba save global comments xlsx failed", "note_id", noteID, "err", err)
+				}
+			default:
+				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "tieba",
+						NoteID:          noteID,
+						CommentID:       comments[i].CommentID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Content,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].LikeCount,
+						UserID:          comments[i].UserID,
+						UserNickname:    comments[i].UserNickname,
+					})
+				}
+				if _, err := store.AppendUniqueCommentsJSONL(
+					noteID,
+					items,
+					func(item any) (string, error) { return item.(Comment).CommentID, nil },
+				); err != nil {
+					logger.Error("tieba save comments jsonl failed", "note_id", noteID, "err", err)
+				}
+				if _, err := store.AppendUniqueGlobalCommentsJSONL(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+				); err != nil {
+					logger.Error("tieba save global comments jsonl failed", "note_id", noteID, "err", err)
+				}
+			}
+		}
+	}
 	return nil
 }
 
