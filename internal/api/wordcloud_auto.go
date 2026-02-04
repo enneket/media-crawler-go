@@ -18,6 +18,10 @@ type autoWordcloudOptions struct {
 	NoteID       string
 	StoreBackend string
 	SQLitePath   string
+	MySQLDSN     string
+	PostgresDSN  string
+	MongoURI     string
+	MongoDB      string
 
 	MaxComments int
 	MaxWords    int
@@ -92,8 +96,15 @@ func collectCommentTextsAuto(ctx context.Context, opts autoWordcloudOptions) ([]
 	if opts.MaxComments <= 0 {
 		return nil, nil
 	}
-	if strings.EqualFold(strings.TrimSpace(opts.StoreBackend), "sqlite") {
+	switch strings.ToLower(strings.TrimSpace(opts.StoreBackend)) {
+	case "sqlite":
 		return collectCommentTextsFromSQLitePath(ctx, opts.Platform, opts.NoteID, opts.MaxComments, opts.SQLitePath)
+	case "mysql":
+		return collectCommentTextsFromMySQLDSN(ctx, opts.Platform, opts.NoteID, opts.MaxComments, opts.MySQLDSN)
+	case "postgres", "postgresql":
+		return collectCommentTextsFromPostgresDSN(ctx, opts.Platform, opts.NoteID, opts.MaxComments, opts.PostgresDSN)
+	case "mongodb", "mongo":
+		return collectCommentTextsFromMongo(ctx, opts.Platform, opts.NoteID, opts.MaxComments, opts.MongoURI, opts.MongoDB)
 	}
 	return collectCommentTextsFromFiles(ctx, opts.DataDir, opts.Platform, opts.NoteID, opts.MaxComments)
 }

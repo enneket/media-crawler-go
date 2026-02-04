@@ -150,8 +150,15 @@ func collectCommentTexts(ctx context.Context, dataDir, platform, noteID string, 
 	if max <= 0 {
 		return nil, nil
 	}
-	if strings.EqualFold(strings.TrimSpace(config.AppConfig.StoreBackend), "sqlite") {
+	switch strings.ToLower(strings.TrimSpace(config.AppConfig.StoreBackend)) {
+	case "sqlite":
 		return collectCommentTextsFromSQLite(ctx, platform, noteID, max)
+	case "mysql":
+		return collectCommentTextsFromMySQLDSN(ctx, platform, noteID, max, config.AppConfig.MySQLDSN)
+	case "postgres", "postgresql":
+		return collectCommentTextsFromPostgresDSN(ctx, platform, noteID, max, config.AppConfig.PostgresDSN)
+	case "mongodb", "mongo":
+		return collectCommentTextsFromMongo(ctx, platform, noteID, max, config.AppConfig.MongoURI, config.AppConfig.MongoDB)
 	}
 	return collectCommentTextsFromFiles(ctx, dataDir, platform, noteID, max)
 }

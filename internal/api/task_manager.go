@@ -126,6 +126,10 @@ func (m *TaskManager) Run(req RunRequest) error {
 			Platform:     cfgSnapshot.Platform,
 			StoreBackend: cfgSnapshot.StoreBackend,
 			SQLitePath:   cfgSnapshot.SQLitePath,
+			MySQLDSN:     cfgSnapshot.MySQLDSN,
+			PostgresDSN:  cfgSnapshot.PostgresDSN,
+			MongoURI:     cfgSnapshot.MongoURI,
+			MongoDB:      cfgSnapshot.MongoDB,
 		}
 
 		m.mu.Lock()
