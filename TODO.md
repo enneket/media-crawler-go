@@ -86,6 +86,27 @@
 ### 词云能力细节
 - [x] 词云质量对齐（best-effort）：支持 STOP_WORDS_FILE/CUSTOM_WORDS/FONT_PATH，保存 PNG 与词频 JSON；分词为“汉字段 + 停用词切分 + 自定义词匹配”的简化实现。
 
+## 体验差异（待增强，不影响主功能）
+
+这些能力不影响 Python 开源版的“功能入口”，但在稳定性/易用性/输出质量上仍有差距，建议后续按需补齐。
+
+### 评论稳定性
+- [ ] 知乎评论全量翻页：从“HTML 初始数据”升级为可稳定翻页的抓取链路。
+- [ ] 快手评论全量翻页：从“HTML 初始数据”升级为可稳定翻页的抓取链路。
+
+### 媒体下载稳定性
+- [ ] B 站下载稳定性增强：playurl 鉴权/清晰度选择/失败重试策略进一步完善。
+- [ ] 微博下载稳定性增强：解析与重试策略进一步完善。
+
+### 反检测强度
+- [ ] 支持注入完整 stealth.min.js：支持通过配置指定脚本路径（默认 best-effort 脚本），便于对齐 Python 版注入策略。
+
+### Excel 导出体验
+- [ ] Excel 单文件多 Sheet：contents/comments/creators 分 Sheet，补齐样式（表头样式/自动列宽/边框/换行），对齐 Python 版导出体验。
+
+### 存储语义一致性
+- [ ] 统一/澄清 STORE_BACKEND 与 SAVE_DATA_OPTION：补充文档与 CLI 说明，减少与 Python `SAVE_DATA_OPTION` 的认知差异。
+
 ## 开发任务清单（可执行）
 - [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
 - [x] T-102 对齐 comments 的 CSV/XLSX：引入统一 Comment 结构并改造各平台落盘（当前仅 xhs/douyin 有评论抓取）。
@@ -106,3 +127,9 @@
 - [x] T-402 CDP 端口对齐：自动探测可用 DebugPort 并回退。
 - [x] T-403 词云对齐：支持停用词/自定义词/更合理中文分词（best-effort），并补齐 PNG/词频输出。
 - [x] T-404 CLI 覆盖对齐：补齐评论/子评论/Headless/CDP/词云等运行开关的 CLI 覆盖。
+- [ ] T-501 知乎评论全量翻页与稳定抓取。
+- [ ] T-502 快手评论全量翻页与稳定抓取。
+- [ ] T-503 媒体下载稳定性增强：B 站/微博。
+- [ ] T-504 Stealth 强度增强：支持配置完整 stealth.min.js 注入。
+- [ ] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化。
+- [ ] T-506 存储语义对齐：文档/CLI 说明与默认策略优化。

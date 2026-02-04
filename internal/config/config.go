@@ -61,6 +61,7 @@ type Config struct {
 	StopWordsFile        string            `mapstructure:"STOP_WORDS_FILE"`
 	FontPath             string            `mapstructure:"FONT_PATH"`
 	CustomWords          map[string]string `mapstructure:"CUSTOM_WORDS"`
+	StealthScriptPath    string            `mapstructure:"STEALTH_SCRIPT_PATH"`
 
 	// XHS Specific
 	SortType             string   `mapstructure:"SORT_TYPE"`
@@ -154,6 +155,7 @@ func LoadConfig(path string) error {
 	viper.SetDefault("STOP_WORDS_FILE", "")
 	viper.SetDefault("FONT_PATH", "")
 	viper.SetDefault("CUSTOM_WORDS", map[string]string{})
+	viper.SetDefault("STEALTH_SCRIPT_PATH", "")
 	viper.SetDefault("SORT_TYPE", "popularity_descending")
 	viper.SetDefault("BILI_CREATOR_ID_LIST", []string{})
 	viper.SetDefault("BILI_SEARCH_MODE", "video")
