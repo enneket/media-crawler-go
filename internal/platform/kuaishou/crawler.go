@@ -15,11 +15,22 @@ import (
 )
 
 type Crawler struct {
-	client *Client
+	client fetchClient
 }
 
 func NewCrawler() *Crawler {
 	return &Crawler{client: NewClient()}
+}
+
+func NewCrawlerWithClient(client fetchClient) *Crawler {
+	if client == nil {
+		client = NewClient()
+	}
+	return &Crawler{client: client}
+}
+
+type fetchClient interface {
+	FetchHTML(context.Context, string) (FetchResult, error)
 }
 
 func (c *Crawler) Run(ctx context.Context, req crawler.Request) (crawler.Result, error) {
@@ -291,6 +302,112 @@ func (c *Crawler) fetchAndSaveDetail(ctx context.Context, platform string, url s
 	logger.Info("kuaishou note saved", "note_id", noteID)
 	if riskHint != "" {
 		return crawler.NewRiskHintError(platform, res.URL, riskHint)
+	}
+
+	if config.AppConfig.EnableGetComments {
+		comments := parseCommentsFromHTML(res.Body, noteID, config.AppConfig.CrawlerMaxComments, config.AppConfig.EnableGetSubComments)
+		if len(comments) > 0 {
+			switch config.AppConfig.SaveDataOption {
+			case "csv":
+				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, &comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "kuaishou",
+						NoteID:          noteID,
+						CommentID:       comments[i].CommentID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Content,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].LikeCount,
+						UserID:          comments[i].UserID,
+						UserNickname:    comments[i].UserNickname,
+					})
+				}
+				if _, err := store.AppendUniqueCommentsCSV(
+					noteID,
+					items,
+					func(item any) (string, error) { return item.(*Comment).CommentID, nil },
+					(Comment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+				); err != nil {
+					logger.Error("kuaishou save comments csv failed", "note_id", noteID, "err", err)
+				}
+				if _, err := store.AppendUniqueGlobalCommentsCSV(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+					(&store.UnifiedComment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+				); err != nil {
+					logger.Error("kuaishou save global comments csv failed", "note_id", noteID, "err", err)
+				}
+			case "xlsx":
+				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, &comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "kuaishou",
+						NoteID:          noteID,
+						CommentID:       comments[i].CommentID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Content,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].LikeCount,
+						UserID:          comments[i].UserID,
+						UserNickname:    comments[i].UserNickname,
+					})
+				}
+				if _, err := store.AppendUniqueCommentsXLSX(
+					noteID,
+					items,
+					func(item any) (string, error) { return item.(*Comment).CommentID, nil },
+					(Comment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*Comment).ToCSV(), nil },
+				); err != nil {
+					logger.Error("kuaishou save comments xlsx failed", "note_id", noteID, "err", err)
+				}
+				if _, err := store.AppendUniqueGlobalCommentsXLSX(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+					(&store.UnifiedComment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+				); err != nil {
+					logger.Error("kuaishou save global comments xlsx failed", "note_id", noteID, "err", err)
+				}
+			default:
+				items := make([]any, 0, len(comments))
+				globalItems := make([]any, 0, len(comments))
+				for i := range comments {
+					items = append(items, comments[i])
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:        "kuaishou",
+						NoteID:          noteID,
+						CommentID:       comments[i].CommentID,
+						ParentCommentID: comments[i].ParentCommentID,
+						Content:         comments[i].Content,
+						CreateTime:      comments[i].CreateTime,
+						LikeCount:       comments[i].LikeCount,
+						UserID:          comments[i].UserID,
+						UserNickname:    comments[i].UserNickname,
+					})
+				}
+				if _, err := store.AppendUniqueCommentsJSONL(
+					noteID,
+					items,
+					func(item any) (string, error) { return item.(Comment).CommentID, nil },
+				); err != nil {
+					logger.Error("kuaishou save comments jsonl failed", "note_id", noteID, "err", err)
+				}
+				if _, err := store.AppendUniqueGlobalCommentsJSONL(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+				); err != nil {
+					logger.Error("kuaishou save global comments jsonl failed", "note_id", noteID, "err", err)
+				}
+			}
+		}
 	}
 	return nil
 }
