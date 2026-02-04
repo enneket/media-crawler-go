@@ -11,6 +11,7 @@ type ProviderName string
 const (
 	ProviderKuaiDaiLi  ProviderName = "kuaidaili"
 	ProviderWanDouHTTP ProviderName = "wandouhttp"
+	ProviderJiSuHTTP   ProviderName = "jisuhttp"
 	ProviderStatic     ProviderName = "static"
 )
 

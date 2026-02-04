@@ -10,6 +10,8 @@ func NewProvider(name string) (Provider, error) {
 		return NewKuaiDaiLiFromEnv(), nil
 	case ProviderWanDouHTTP:
 		return NewWanDouHTTPFromEnv(), nil
+	case ProviderJiSuHTTP, "jishuhttp", "jishu_http":
+		return NewJiSuHTTPFromEnv(), nil
 	case ProviderStatic:
 		return NewStaticFromConfigOrEnv(), nil
 	default:

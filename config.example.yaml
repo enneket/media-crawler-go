@@ -24,7 +24,7 @@ HTTP_RETRY_MAX_DELAY_MS: 4000
 # Proxy (optional)
 ENABLE_IP_PROXY: false
 IP_PROXY_POOL_COUNT: 2
-# kuaidaili | wandouhttp | static
+# kuaidaili | wandouhttp | jisuhttp | static
 IP_PROXY_PROVIDER_NAME: "kuaidaili"
 # For IP_PROXY_PROVIDER_NAME=static
 # IP_PROXY_LIST: "http://1.2.3.4:8080, http://user:pass@5.6.7.8:8080"

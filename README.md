@@ -38,7 +38,7 @@ Notes:
 - Login support by platform (best-effort):
   - xhs/douyin: qrcode / phone / cookie
   - bilibili/weibo/tieba/zhihu/kuaishou: cookie (HTTP client)
-- Proxy: set `ENABLE_IP_PROXY: true`. `IP_PROXY_PROVIDER_NAME` supports `kuaidaili`, `wandouhttp`, and `static` (use `IP_PROXY_LIST` or `IP_PROXY_FILE`).
+- Proxy: set `ENABLE_IP_PROXY: true`. `IP_PROXY_PROVIDER_NAME` supports `kuaidaili`, `wandouhttp`, `jisuhttp` (or `jishuhttp`/`jishu_http`), and `static` (use `IP_PROXY_LIST` or `IP_PROXY_FILE`).
 - `SAVE_DATA_OPTION`: `json` / `csv` / `xlsx` (`excel` is accepted as an alias for Python compatibility).
 - `PYTHON_COMPAT_OUTPUT: true` will additionally write Python-style JSON arrays to `data/<platform>/json/<crawler_type>_<item_type>_<date>.json`.
 - `ENABLE_GET_WORDCLOUD: true` will auto-generate `wordcloud_comments_*.svg` after the task finishes (best-effort).
@@ -101,7 +101,7 @@ go run cmd/media-crawler/main.go
 - [x] Comment Crawling (pagination, optional sub-comments, currently for xhs/douyin/bilibili/weibo/tieba/zhihu/kuaishou)
 - [x] Media Download (basic, currently for xhs/douyin/weibo/bilibili)
 - [x] CDP Mode (connect over remote debugging)
-- [x] Proxy Pool (kuaidaili / wandouhttp / static list)
+- [x] Proxy Pool (kuaidaili / wandouhttp / jisuhttp / static list)
 - [x] Store Backends (file/sqlite/mysql/postgres/mongodb)
 
 See [TODO.md](./TODO.md) for the porting checklist.

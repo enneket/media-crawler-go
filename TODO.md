@@ -12,12 +12,13 @@
 - [x] CLI 入口：读取 config.yaml（viper）后按 PLATFORM 启动爬虫；支持 `-api` 启动 WebUI/API。
 - [x] YAML + 环境变量加载：`MEDIA_CRAWLER_` 前缀覆盖；默认值对齐 Python 核心配置。
 - [x] HTTP 基础能力：超时/重试/退避（HTTP_TIMEOUT_SEC / HTTP_RETRY_*）。
-- [x] 代理池：kuaidaili / wandouhttp，支持失效切换（403/429 等场景 InvalidateCurrent）。
+- [x] 代理池：kuaidaili / wandouhttp / static(list/file)，支持失效切换（403/429 等场景 InvalidateCurrent）。
 - [x] Cache：memory / redis / none（用于跨流程去重、词云缓存等）。
+- [x] CDP 模式：可复用本机 Chrome/Edge 登录态（ENABLE_CDP_MODE / CDP_DEBUG_PORT / USER_DATA_DIR 等）。
 
 ### 存储 / 数据
 - [x] 文件落地：json(逐行追加 JSON) / CSV（含 BOM）/ XLSX（含 header 校验）。
-- [x] DB 后端：SQLite / MySQL / Postgres（自动初始化 schema，notes/creators/comments upsert/去重写入）。
+- [x] DB 后端：SQLite / MySQL / Postgres / MongoDB（自动初始化 schema，notes/creators/comments upsert/去重写入）。
 - [x] 输出目录可配置：DATA_DIR（同时影响落盘与 /data API）。
 - [x] Data API：文件列表/预览/下载/统计（/data/files /data/files/* /data/download/* /data/stats）。
 - [x] 增值能力：评论词云（/data/wordcloud）。
@@ -39,11 +40,13 @@
 - 平台：xhs / dy / ks / bili / wb / tieba / zhihu（7 个）
 - 模式：search / detail / creator
 - 存储：csv / json(数组写回) / excel / sqlite / mysql(db) / mongodb / postgres
-- 代理：kuaidaili / wandouhttp（代理池 + 自动刷新）
+- 代理：kuaidaili / wandouhttp / jishu_http（代理池 + 自动刷新）
 - 登录：qrcode / phone / cookie（以 xhs/dy 的 Playwright 登录流最完整）
 - 评论：7 平台均有“抓评论”实现（含部分平台二级评论开关）
 - 媒体：至少覆盖 xhs / dy / wb / bili（按配置落盘）
 - 词云：json 模式 + 开关打开时，爬取完成后自动生成
+- WebUI / API：FastAPI + 静态 WebUI 资源
+- CDP：支持 CDP 模式复用本机浏览器登录态
 
 ## 与 Python 版差异（未完成/需确认）
 
@@ -63,6 +66,16 @@
 ### 登录说明
 - [x] 细化“各平台支持的登录形态”说明：README 已补充各平台支持范围（xhs/douyin 支持 qrcode/phone/cookie，其它平台一般为 cookie）。
 
+### 代理能力对齐
+- [x] 代理供应商对齐：补齐 Python 版的 `jishu_http` provider（支持 jisuhttp/jishuhttp/jishu_http）。
+- [ ] 统一代理接入：确认并补齐 bilibili/weibo/tieba/zhihu/kuaishou 的 HTTP client 全链路走代理池（当前显式接入点主要在 xhs/douyin）。
+
+### 词云（DB 后端）
+- [ ] 自动词云读取 DB 覆盖：目前自动词云主要走 sqlite 或文件扫描；补齐 mysql/postgres/mongodb 的读取路径（best-effort）。
+
+### CLI 形态
+- [ ] CLI 参数对齐：补齐 Python 版常用 CLI 覆盖（如 init_db、cookies/inputs/keywords 等直接覆盖配置），或引入子命令体系（run/search/detail/creator）。
+
 ## 开发任务清单（可执行）
 - [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
 - [x] T-102 对齐 comments 的 CSV/XLSX：引入统一 Comment 结构并改造各平台落盘（当前仅 xhs/douyin 有评论抓取）。
@@ -75,3 +88,7 @@
 - [x] T-203 兼容 save_data_option：接受 excel 作为 xlsx 的别名，并同步更新文档与 /config/options。
 - [x] T-204 增加 Python 兼容输出模式（JSON 数组 + data/{platform}/{file_type}/命名规则）。
 - [x] T-205 任务结束自动生成词云（对齐 Python 行为，可通过开关控制）。
+- [x] T-301 代理供应商对齐：新增 jishu_http provider。
+- [ ] T-302 统一代理接入：所有平台 HTTP client 统一走代理池。
+- [ ] T-303 词云 DB 覆盖：支持从 mysql/postgres/mongodb 读取评论数据生成词云。
+- [ ] T-304 丰富 CLI：补齐 init_db 与常用参数覆盖/子命令体系。

@@ -196,4 +196,5 @@ func Normalize(cfg *Config) {
 	cfg.StoreBackend = strings.ToLower(strings.TrimSpace(cfg.StoreBackend))
 	cfg.CrawlerType = strings.ToLower(strings.TrimSpace(cfg.CrawlerType))
 	cfg.LoginType = strings.ToLower(strings.TrimSpace(cfg.LoginType))
+	cfg.IPProxyProviderName = strings.ToLower(strings.TrimSpace(cfg.IPProxyProviderName))
 }
