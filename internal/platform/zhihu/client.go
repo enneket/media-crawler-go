@@ -135,3 +135,37 @@ func (c *Client) FetchHTML(ctx context.Context, url string) (FetchResult, error)
 	out.Body = string(body)
 	return out, nil
 }
+
+func (c *Client) FetchJSON(ctx context.Context, url string) (FetchResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := c.ensureProxy(ctx); err != nil {
+		return FetchResult{}, err
+	}
+	r, err := c.httpClient.R().
+		SetContext(ctx).
+		SetHeader("accept", "application/json, text/plain, */*").
+		Get(url)
+	if err != nil {
+		return FetchResult{}, err
+	}
+	if r.IsError() {
+		return FetchResult{}, crawler.NewHTTPStatusError("zhihu", url, r.StatusCode(), r.String())
+	}
+	body := r.Body()
+	out := FetchResult{
+		URL:         url,
+		StatusCode:  r.StatusCode(),
+		ContentType: r.Header().Get("content-type"),
+		OriginalLen: len(body),
+		FetchedAt:   time.Now().Unix(),
+	}
+	const maxBody = 2_000_000
+	if len(body) > maxBody {
+		body = body[:maxBody]
+		out.Truncated = true
+	}
+	out.Body = string(body)
+	return out, nil
+}

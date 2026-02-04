@@ -324,7 +324,7 @@ func (c *Crawler) fetchAndSaveDetail(ctx context.Context, platform string, url s
 	}
 
 	if config.AppConfig.EnableGetComments {
-		comments := parseCommentsFromHTML(res.Body, noteID, config.AppConfig.CrawlerMaxComments, config.AppConfig.EnableGetSubComments)
+		comments := fetchCommentsPreferAPI(ctx, c.client, res.Body, noteID, aid, config.AppConfig.CrawlerMaxComments, config.AppConfig.EnableGetSubComments)
 		if len(comments) > 0 {
 			switch config.AppConfig.SaveDataOption {
 			case "csv":
