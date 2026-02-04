@@ -132,4 +132,4 @@
 - [ ] T-503 媒体下载稳定性增强：B 站/微博。
 - [ ] T-504 Stealth 强度增强：支持配置完整 stealth.min.js 注入。
 - [x] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化（best-effort）。
-- [ ] T-506 存储语义对齐：文档/CLI 说明与默认策略优化。
+- [x] T-506 存储语义对齐（best-effort）：补充 README 与 /config/options 说明，明确 STORE_BACKEND（是否写 DB）与 SAVE_DATA_OPTION（文件格式）职责边界，并增加 xlsx_book/excel 的解释。

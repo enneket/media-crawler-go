@@ -10,7 +10,8 @@ PYTHON_COMPAT_OUTPUT: false
 # Storage
 STORE_BACKEND: "file" # file | sqlite | mysql | postgres | mongodb
 SQLITE_PATH: "data/media_crawler.db"
-SAVE_DATA_OPTION: "json" # json | csv | xlsx | excel
+SAVE_DATA_OPTION: "json" # json | csv | xlsx | xlsx_book | excel(excel -> xlsx_book)
+STEALTH_SCRIPT_PATH: "" # optional: path to full stealth.min.js (e.g. libs/stealth.min.js)
 MONGO_URI: "" # e.g. mongodb://127.0.0.1:27017
 MONGO_DB: "media_crawler"
 # Logging

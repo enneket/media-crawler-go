@@ -33,6 +33,22 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 		"login_types":      []string{"qrcode", "phone", "cookie"},
 		"store_backends":   []string{"file", "sqlite", "mysql", "postgres", "mongodb"},
 		"save_data_option": []string{"json", "csv", "xlsx", "xlsx_book", "excel"},
+		"descriptions": map[string]any{
+			"store_backend": map[string]string{
+				"file":    "不写入数据库，仅文件落盘",
+				"sqlite":  "写入 SQLite（同时文件落盘）",
+				"mysql":   "写入 MySQL（同时文件落盘）",
+				"postgres": "写入 Postgres（同时文件落盘）",
+				"mongodb": "写入 MongoDB（同时文件落盘）",
+			},
+			"save_data_option": map[string]string{
+				"json":      "文件落盘为 json/jsonl（默认）",
+				"csv":       "文件落盘为 csv",
+				"xlsx":      "文件落盘为 xlsx（按 note 分文件）",
+				"xlsx_book": "文件落盘为单个 workbook（Contents/Comments/Creators 分 Sheet）",
+				"excel":     "兼容 Python：会被规范化为 xlsx_book",
+			},
+		},
 		"proxy_providers":  []string{"kuaidaili", "wandouhttp", "jisuhttp", "jishuhttp", "jishu_http", "static"},
 		"cache_backends":   []string{"memory", "redis", "none"},
 		"bili_search_mode": []string{"video"},

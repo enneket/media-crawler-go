@@ -39,15 +39,17 @@ Notes:
   - xhs/douyin: qrcode / phone / cookie
   - bilibili/weibo/tieba/zhihu/kuaishou: cookie (HTTP client)
 - Proxy: set `ENABLE_IP_PROXY: true`. `IP_PROXY_PROVIDER_NAME` supports `kuaidaili`, `wandouhttp`, `jisuhttp` (or `jishuhttp`/`jishu_http`), and `static` (use `IP_PROXY_LIST` or `IP_PROXY_FILE`).
-- `SAVE_DATA_OPTION`: `json` / `csv` / `xlsx` (`excel` is accepted as an alias for Python compatibility).
+- `STORE_BACKEND` controls DB writes (`file` disables DB; `sqlite/mysql/postgres/mongodb` will upsert notes/creators and insert comments into DB in addition to file output).
+- `SAVE_DATA_OPTION` controls file output: `json` / `csv` / `xlsx` / `xlsx_book` (`excel` is accepted as an alias and will be normalized to `xlsx_book` for Python compatibility).
 - `PYTHON_COMPAT_OUTPUT: true` will additionally write Python-style JSON arrays to `data/<platform>/json/<crawler_type>_<item_type>_<date>.json`.
 - `ENABLE_GET_WORDCLOUD: true` will auto-generate `wordcloud_comments_*.svg` after the task finishes (best-effort).
 
 ## Output
 
-- Notes: `data/<platform>/notes/<note_id>/note.(json|csv|xlsx)`
-- Comments: `data/<platform>/notes/<note_id>/comments.(jsonl|csv|xlsx)` (deduped via `comments.idx`, xlsx currently for xhs/douyin)
-- Global Comments: `data/<platform>/comments.(jsonl|csv|xlsx)` (unified schema, deduped via `comments.global.idx`, currently for xhs/douyin)
+- Notes: `data/<platform>/notes/<note_id>/note.(json|csv|xlsx)` or a single workbook `data/<platform>/<platform>_<crawler_type>_<timestamp>.xlsx` (if `SAVE_DATA_OPTION=xlsx_book` or `excel`)
+- Comments: `data/<platform>/notes/<note_id>/comments.(jsonl|csv|xlsx)` (deduped via `comments.idx`)
+- Global Comments: `data/<platform>/comments.(jsonl|csv|xlsx)` (unified schema, deduped via `comments.global.idx`)
+- Workbook mode: `SAVE_DATA_OPTION=xlsx_book` (or `excel`) writes `Contents/Comments/Creators` sheets into one workbook (best-effort)
 - Media: `data/<platform>/notes/<note_id>/media/*`
 
 ## API Mode (Web UI)
