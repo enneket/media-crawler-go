@@ -68,7 +68,7 @@
 
 ### 代理能力对齐
 - [x] 代理供应商对齐：补齐 Python 版的 `jishu_http` provider（支持 jisuhttp/jishuhttp/jishu_http）。
-- [ ] 统一代理接入：确认并补齐 bilibili/weibo/tieba/zhihu/kuaishou 的 HTTP client 全链路走代理池（当前显式接入点主要在 xhs/douyin）。
+- [x] 统一代理接入：bilibili/weibo/tieba/zhihu/kuaishou 的 HTTP client 全链路走代理池（并补齐 douyin 短链解析的代理接入）。
 
 ### 词云（DB 后端）
 - [ ] 自动词云读取 DB 覆盖：目前自动词云主要走 sqlite 或文件扫描；补齐 mysql/postgres/mongodb 的读取路径（best-effort）。
@@ -89,6 +89,6 @@
 - [x] T-204 增加 Python 兼容输出模式（JSON 数组 + data/{platform}/{file_type}/命名规则）。
 - [x] T-205 任务结束自动生成词云（对齐 Python 行为，可通过开关控制）。
 - [x] T-301 代理供应商对齐：新增 jishu_http provider。
-- [ ] T-302 统一代理接入：所有平台 HTTP client 统一走代理池。
+- [x] T-302 统一代理接入：所有平台 HTTP client 统一走代理池。
 - [ ] T-303 词云 DB 覆盖：支持从 mysql/postgres/mongodb 读取评论数据生成词云。
 - [ ] T-304 丰富 CLI：补齐 init_db 与常用参数覆盖/子命令体系。

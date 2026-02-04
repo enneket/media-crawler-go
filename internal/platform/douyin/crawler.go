@@ -364,7 +364,7 @@ func (c *DouyinCrawler) runDetailMode(ctx context.Context, req crawler.Request, 
 
 	var ids []string
 	for _, input := range inputs {
-		awemeID := resolveAwemeID(input)
+		awemeID := c.resolveAwemeID(ctx, input)
 		if awemeID == "" {
 			logger.Warn("skip invalid douyin url/id", "value", input)
 			continue
@@ -521,13 +521,13 @@ func (c *DouyinCrawler) runSearchMode(ctx context.Context, req crawler.Request, 
 	return out, nil
 }
 
-func resolveAwemeID(input string) string {
+func (c *DouyinCrawler) resolveAwemeID(ctx context.Context, input string) string {
 	awemeID := ExtractAwemeID(input)
 	if awemeID != "" {
 		return awemeID
 	}
 	if strings.Contains(input, "v.douyin.com") {
-		finalURL, err := ResolveShortURL(input)
+		finalURL, err := ResolveShortURLWithProxy(ctx, input, c.proxyPool)
 		if err == nil {
 			return ExtractAwemeID(finalURL)
 		}

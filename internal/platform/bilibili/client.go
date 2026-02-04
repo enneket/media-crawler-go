@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
+	"media-crawler-go/internal/proxy"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,14 +17,23 @@ import (
 
 type Client struct {
 	httpClient *resty.Client
+	switcher   *proxy.Switcher
+	proxyPool  *proxy.Pool
 }
 
 func NewClient() *Client {
+	switcher := proxy.NewSwitcher()
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = switcher.ProxyFunc
+
 	timeoutSec := config.AppConfig.HttpTimeoutSec
 	if timeoutSec <= 0 {
 		timeoutSec = 60
 	}
-	hc := &http.Client{Timeout: time.Duration(timeoutSec) * time.Second}
+	hc := &http.Client{
+		Transport: transport,
+		Timeout:   time.Duration(timeoutSec) * time.Second,
+	}
 	rc := resty.NewWithClient(hc)
 	rc.SetBaseURL("https://api.bilibili.com")
 	rc.SetHeaders(map[string]string{
@@ -51,6 +61,7 @@ func NewClient() *Client {
 	rc.SetRetryCount(retryCount)
 	rc.SetRetryWaitTime(time.Duration(baseMs) * time.Millisecond)
 	rc.SetRetryMaxWaitTime(time.Duration(maxMs) * time.Millisecond)
+	out := &Client{httpClient: rc, switcher: switcher}
 	rc.AddRetryCondition(func(r *resty.Response, err error) bool {
 		if err != nil {
 			return crawler.ShouldRetryError(err)
@@ -58,10 +69,17 @@ func NewClient() *Client {
 		if r == nil {
 			return true
 		}
-		return crawler.ShouldRetryStatus(r.StatusCode())
+		code := r.StatusCode()
+		if out.proxyPool != nil && crawler.ShouldInvalidateProxyStatus(code) {
+			out.proxyPool.InvalidateCurrent()
+		}
+		if code == http.StatusForbidden && out.proxyPool != nil {
+			return true
+		}
+		return crawler.ShouldRetryStatus(code)
 	})
 
-	return &Client{httpClient: rc}
+	return out
 }
 
 type ViewResponse struct {
@@ -70,7 +88,29 @@ type ViewResponse struct {
 	Data    json.RawMessage `json:"data"`
 }
 
+func (c *Client) InitProxyPool(pool *proxy.Pool) {
+	c.proxyPool = pool
+}
+
+func (c *Client) ensureProxy(ctx context.Context) error {
+	if c.proxyPool == nil || c.switcher == nil {
+		return nil
+	}
+	p, err := c.proxyPool.GetOrRefresh(ctx)
+	if err != nil {
+		return err
+	}
+	u, err := p.HTTPURL()
+	if err != nil {
+		return err
+	}
+	return c.switcher.Set(u)
+}
+
 func (c *Client) GetView(ctx context.Context, bvid string, aid int64) (ViewResponse, error) {
+	if err := c.ensureProxy(ctx); err != nil {
+		return ViewResponse{}, err
+	}
 	req := c.httpClient.R().SetContext(ctx)
 	if bvid != "" {
 		req.SetQueryParam("bvid", bvid)
@@ -100,6 +140,9 @@ type SearchResponse struct {
 }
 
 func (c *Client) SearchVideo(ctx context.Context, keyword string, page int, searchType string) (SearchResponse, error) {
+	if err := c.ensureProxy(ctx); err != nil {
+		return SearchResponse{}, err
+	}
 	keyword = strings.TrimSpace(keyword)
 	if keyword == "" {
 		return SearchResponse{}, fmt.Errorf("empty keyword")
@@ -141,6 +184,9 @@ type UpInfoResponse struct {
 }
 
 func (c *Client) GetUpInfo(ctx context.Context, mid string) (UpInfoResponse, error) {
+	if err := c.ensureProxy(ctx); err != nil {
+		return UpInfoResponse{}, err
+	}
 	mid = strings.TrimSpace(mid)
 	if mid == "" {
 		return UpInfoResponse{}, fmt.Errorf("empty mid")
@@ -170,6 +216,9 @@ type UpVideosResponse struct {
 }
 
 func (c *Client) ListUpVideos(ctx context.Context, mid string, page int, pageSize int) (UpVideosResponse, error) {
+	if err := c.ensureProxy(ctx); err != nil {
+		return UpVideosResponse{}, err
+	}
 	mid = strings.TrimSpace(mid)
 	if mid == "" {
 		return UpVideosResponse{}, fmt.Errorf("empty mid")
@@ -210,6 +259,9 @@ type PlayURLResponse struct {
 }
 
 func (c *Client) GetPlayURL(ctx context.Context, aid int64, cid int64, qn int) (PlayURLResponse, error) {
+	if err := c.ensureProxy(ctx); err != nil {
+		return PlayURLResponse{}, err
+	}
 	if aid <= 0 || cid <= 0 {
 		return PlayURLResponse{}, fmt.Errorf("invalid aid/cid")
 	}

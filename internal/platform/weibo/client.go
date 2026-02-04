@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
+	"media-crawler-go/internal/proxy"
 	"net/http"
 	"strings"
 	"time"
@@ -15,14 +16,23 @@ import (
 
 type Client struct {
 	httpClient *resty.Client
+	switcher   *proxy.Switcher
+	proxyPool  *proxy.Pool
 }
 
 func NewClient() *Client {
+	switcher := proxy.NewSwitcher()
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = switcher.ProxyFunc
+
 	timeoutSec := config.AppConfig.HttpTimeoutSec
 	if timeoutSec <= 0 {
 		timeoutSec = 60
 	}
-	hc := &http.Client{Timeout: time.Duration(timeoutSec) * time.Second}
+	hc := &http.Client{
+		Transport: transport,
+		Timeout:   time.Duration(timeoutSec) * time.Second,
+	}
 	rc := resty.NewWithClient(hc)
 	rc.SetBaseURL("https://m.weibo.cn")
 	rc.SetHeaders(map[string]string{
@@ -50,6 +60,7 @@ func NewClient() *Client {
 	rc.SetRetryCount(retryCount)
 	rc.SetRetryWaitTime(time.Duration(baseMs) * time.Millisecond)
 	rc.SetRetryMaxWaitTime(time.Duration(maxMs) * time.Millisecond)
+	out := &Client{httpClient: rc, switcher: switcher}
 	rc.AddRetryCondition(func(r *resty.Response, err error) bool {
 		if err != nil {
 			return crawler.ShouldRetryError(err)
@@ -57,10 +68,17 @@ func NewClient() *Client {
 		if r == nil {
 			return true
 		}
-		return crawler.ShouldRetryStatus(r.StatusCode())
+		code := r.StatusCode()
+		if out.proxyPool != nil && crawler.ShouldInvalidateProxyStatus(code) {
+			out.proxyPool.InvalidateCurrent()
+		}
+		if code == http.StatusForbidden && out.proxyPool != nil {
+			return true
+		}
+		return crawler.ShouldRetryStatus(code)
 	})
 
-	return &Client{httpClient: rc}
+	return out
 }
 
 type ShowResponse struct {
@@ -68,7 +86,29 @@ type ShowResponse struct {
 	Data json.RawMessage `json:"data"`
 }
 
+func (c *Client) InitProxyPool(pool *proxy.Pool) {
+	c.proxyPool = pool
+}
+
+func (c *Client) ensureProxy(ctx context.Context) error {
+	if c.proxyPool == nil || c.switcher == nil {
+		return nil
+	}
+	p, err := c.proxyPool.GetOrRefresh(ctx)
+	if err != nil {
+		return err
+	}
+	u, err := p.HTTPURL()
+	if err != nil {
+		return err
+	}
+	return c.switcher.Set(u)
+}
+
 func (c *Client) Show(ctx context.Context, id string) (ShowResponse, error) {
+	if err := c.ensureProxy(ctx); err != nil {
+		return ShowResponse{}, err
+	}
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return ShowResponse{}, fmt.Errorf("empty weibo id")
@@ -97,6 +137,9 @@ type GetIndexResponse struct {
 }
 
 func (c *Client) GetIndex(ctx context.Context, params map[string]string) (GetIndexResponse, error) {
+	if err := c.ensureProxy(ctx); err != nil {
+		return GetIndexResponse{}, err
+	}
 	var out GetIndexResponse
 	req := c.httpClient.R().SetContext(ctx).SetResult(&out)
 	for k, v := range params {

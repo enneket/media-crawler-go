@@ -1,6 +1,8 @@
 package douyin
 
 import (
+	"context"
+	"media-crawler-go/internal/proxy"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -57,8 +59,33 @@ func ExtractSecUserID(input string) string {
 }
 
 func ResolveShortURL(raw string) (string, error) {
+	return ResolveShortURLWithProxy(context.Background(), raw, nil)
+}
+
+func ResolveShortURLWithProxy(ctx context.Context, raw string, pool *proxy.Pool) (string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if pool != nil {
+		p, err := pool.GetOrRefresh(ctx)
+		if err != nil {
+			return "", err
+		}
+		u, err := p.HTTPURL()
+		if err != nil {
+			return "", err
+		}
+		uu, err := url.Parse(u)
+		if err != nil {
+			return "", err
+		}
+		transport.Proxy = http.ProxyURL(uu)
+	}
+
 	client := &http.Client{
-		Timeout: 15 * time.Second,
+		Transport: transport,
+		Timeout:   15 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return http.ErrUseLastResponse
@@ -66,7 +93,11 @@ func ResolveShortURL(raw string) (string, error) {
 			return nil
 		},
 	}
-	resp, err := client.Get(raw)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}

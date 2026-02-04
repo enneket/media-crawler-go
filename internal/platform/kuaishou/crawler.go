@@ -1,13 +1,14 @@
 package kuaishou
 
 import (
-	"crypto/sha1"
 	"context"
+	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/logger"
+	"media-crawler-go/internal/proxy"
 	"media-crawler-go/internal/store"
 	"net/url"
 	"strings"
@@ -19,7 +20,16 @@ type Crawler struct {
 }
 
 func NewCrawler() *Crawler {
-	return &Crawler{client: NewClient()}
+	cli := NewClient()
+	if config.AppConfig.EnableIPProxy {
+		provider, err := proxy.NewProvider(config.AppConfig.IPProxyProviderName)
+		if err != nil {
+			logger.Warn("proxy provider init failed", "err", err)
+		} else {
+			cli.InitProxyPool(proxy.NewPool(provider, config.AppConfig.IPProxyPoolCount))
+		}
+	}
+	return &Crawler{client: cli}
 }
 
 func NewCrawlerWithClient(client fetchClient) *Crawler {

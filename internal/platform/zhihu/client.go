@@ -4,6 +4,7 @@ import (
 	"context"
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
+	"media-crawler-go/internal/proxy"
 	"net/http"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 
 type Client struct {
 	httpClient *resty.Client
+	switcher   *proxy.Switcher
+	proxyPool  *proxy.Pool
 }
 
 func NewClient() *Client {
@@ -32,7 +35,14 @@ func NewClient() *Client {
 		timeout = 60 * time.Second
 	}
 
-	httpClient := resty.NewWithClient(&http.Client{Timeout: timeout})
+	switcher := proxy.NewSwitcher()
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = switcher.ProxyFunc
+	hc := &http.Client{
+		Transport: transport,
+		Timeout:   timeout,
+	}
+	httpClient := resty.NewWithClient(hc)
 	headers := map[string]string{
 		"accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 		"accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
@@ -45,6 +55,7 @@ func NewClient() *Client {
 	httpClient.SetRetryCount(retryCount)
 	httpClient.SetRetryWaitTime(baseDelay)
 	httpClient.SetRetryMaxWaitTime(maxDelay)
+	out := &Client{httpClient: httpClient, switcher: switcher}
 	httpClient.AddRetryCondition(func(r *resty.Response, err error) bool {
 		if err != nil {
 			return crawler.ShouldRetryError(err)
@@ -52,10 +63,17 @@ func NewClient() *Client {
 		if r == nil {
 			return true
 		}
-		return crawler.ShouldRetryStatus(r.StatusCode())
+		code := r.StatusCode()
+		if out.proxyPool != nil && crawler.ShouldInvalidateProxyStatus(code) {
+			out.proxyPool.InvalidateCurrent()
+		}
+		if code == http.StatusForbidden && out.proxyPool != nil {
+			return true
+		}
+		return crawler.ShouldRetryStatus(code)
 	})
 
-	return &Client{httpClient: httpClient}
+	return out
 }
 
 type FetchResult struct {
@@ -68,9 +86,31 @@ type FetchResult struct {
 	FetchedAt   int64  `json:"fetched_at,omitempty"`
 }
 
+func (c *Client) InitProxyPool(pool *proxy.Pool) {
+	c.proxyPool = pool
+}
+
+func (c *Client) ensureProxy(ctx context.Context) error {
+	if c.proxyPool == nil || c.switcher == nil {
+		return nil
+	}
+	p, err := c.proxyPool.GetOrRefresh(ctx)
+	if err != nil {
+		return err
+	}
+	u, err := p.HTTPURL()
+	if err != nil {
+		return err
+	}
+	return c.switcher.Set(u)
+}
+
 func (c *Client) FetchHTML(ctx context.Context, url string) (FetchResult, error) {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if err := c.ensureProxy(ctx); err != nil {
+		return FetchResult{}, err
 	}
 	r, err := c.httpClient.R().SetContext(ctx).Get(url)
 	if err != nil {
