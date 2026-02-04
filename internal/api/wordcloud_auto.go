@@ -4,24 +4,28 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"media-crawler-go/internal/config"
 
 	_ "modernc.org/sqlite"
 )
 
 type autoWordcloudOptions struct {
-	DataDir      string
-	Platform     string
-	NoteID       string
-	StoreBackend string
-	SQLitePath   string
-	MySQLDSN     string
-	PostgresDSN  string
-	MongoURI     string
-	MongoDB      string
+	DataDir       string
+	Platform      string
+	NoteID        string
+	StoreBackend  string
+	SQLitePath    string
+	MySQLDSN      string
+	PostgresDSN   string
+	MongoURI      string
+	MongoDB       string
+	StopWordsFile string
+	FontPath      string
+	CustomWords   map[string]string
 
 	MaxComments int
 	MaxWords    int
@@ -66,30 +70,34 @@ func autoGenerateWordcloud(opts autoWordcloudOptions) (string, error) {
 		return "", nil
 	}
 
-	counts := countWords(texts, opts.MaxWords, opts.MinCount)
+	lex := buildWordcloudLexicon(config.Config{
+		StopWordsFile: opts.StopWordsFile,
+		FontPath:      opts.FontPath,
+		CustomWords:   opts.CustomWords,
+	})
+	counts := countWordsWithLexicon(texts, opts.MaxWords, opts.MinCount, lex)
 	if len(counts) == 0 {
 		return "", nil
 	}
 
 	seed := seedFor(opts.Platform + ":" + strings.TrimSpace(opts.NoteID))
 	svg := renderWordcloudSVG(counts, opts.Width, opts.Height, seed)
+	freq := wordFreqJSON(counts)
+	pngBytes, _ := renderWordcloudPNG(counts, opts.Width, opts.Height, seed, opts.FontPath)
 
-	fn := "wordcloud_comments_" + time.Now().Format("20060102_150405") + ".svg"
+	base := "wordcloud_comments_" + time.Now().Format("20060102_150405")
 	if strings.TrimSpace(opts.NoteID) != "" {
-		fn = "wordcloud_" + sanitizeFilename(opts.NoteID) + "_" + time.Now().Format("20060102_150405") + ".svg"
+		base = "wordcloud_" + sanitizeFilename(opts.NoteID) + "_" + time.Now().Format("20060102_150405")
 	}
-	outDir := filepath.Join(opts.DataDir, opts.Platform)
-	if err := os.MkdirAll(outDir, 0755); err != nil {
+	paths, err := saveWordcloudAssets(opts.DataDir, opts.Platform, base, svg, pngBytes, freq)
+	if err != nil {
 		return "", err
 	}
-	full := filepath.Join(outDir, fn)
-	if err := os.WriteFile(full, []byte(svg), 0644); err != nil {
-		return "", err
-	}
-	if rel, err := filepath.Rel(opts.DataDir, full); err == nil {
+	main := paths["svg"]
+	if rel, err := filepath.Rel(opts.DataDir, main); err == nil {
 		return filepath.ToSlash(rel), nil
 	}
-	return fmt.Sprintf("%s/%s", opts.Platform, fn), nil
+	return fmt.Sprintf("%s/%s.svg", opts.Platform, base), nil
 }
 
 func collectCommentTextsAuto(ctx context.Context, opts autoWordcloudOptions) ([]string, error) {

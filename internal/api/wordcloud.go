@@ -74,12 +74,24 @@ func (s *Server) handleDataWordcloud(w http.ResponseWriter, r *http.Request) {
 	}
 	save := queryBoolDefault(q, "save", true)
 	useCache := queryBoolDefault(q, "cache", true)
+	format := strings.ToLower(strings.TrimSpace(q.Get("format")))
+	if format == "" {
+		format = "svg"
+	}
+	if format != "svg" && format != "png" {
+		format = "svg"
+	}
 
 	if !save && useCache && s.cache != nil {
-		key := fmt.Sprintf("wordcloud:comments:%s:%s:%d:%d:%d:%d:%d", platform, noteID, maxComments, maxWords, minCount, width, height)
+		key := fmt.Sprintf("wordcloud:comments:%s:%s:%s:%d:%d:%d:%d:%d", format, platform, noteID, maxComments, maxWords, minCount, width, height)
 		if b, ok, err := s.cache.Get(r.Context(), key); err == nil && ok && len(b) > 0 {
-			w.Header().Set("content-type", "image/svg+xml; charset=utf-8")
-			w.Header().Set("content-disposition", `inline; filename="wordcloud.svg"`)
+			if format == "png" {
+				w.Header().Set("content-type", "image/png")
+				w.Header().Set("content-disposition", `inline; filename="wordcloud.png"`)
+			} else {
+				w.Header().Set("content-type", "image/svg+xml; charset=utf-8")
+				w.Header().Set("content-disposition", `inline; filename="wordcloud.svg"`)
+			}
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write(b)
 			return
@@ -97,7 +109,8 @@ func (s *Server) handleDataWordcloud(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	counts := countWords(texts, maxWords, minCount)
+	lex := buildWordcloudLexicon(config.AppConfig)
+	counts := countWordsWithLexicon(texts, maxWords, minCount, lex)
 	if len(counts) == 0 {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "no words after filtering"})
 		return
@@ -105,45 +118,62 @@ func (s *Server) handleDataWordcloud(w http.ResponseWriter, r *http.Request) {
 
 	seed := seedFor(platform + ":" + noteID)
 	svg := renderWordcloudSVG(counts, width, height, seed)
+	freq := wordFreqJSON(counts)
+	pngBytes, _ := renderWordcloudPNG(counts, width, height, seed, config.AppConfig.FontPath)
 	if !save && useCache && s.cache != nil {
 		ttlSec := config.AppConfig.CacheDefaultTTLSec
 		if ttlSec <= 0 {
 			ttlSec = 600
 		}
-		key := fmt.Sprintf("wordcloud:comments:%s:%s:%d:%d:%d:%d:%d", platform, noteID, maxComments, maxWords, minCount, width, height)
-		_ = s.cache.Set(r.Context(), key, []byte(svg), time.Duration(ttlSec)*time.Second)
+		key := fmt.Sprintf("wordcloud:comments:%s:%s:%s:%d:%d:%d:%d:%d", format, platform, noteID, maxComments, maxWords, minCount, width, height)
+		if format == "png" {
+			_ = s.cache.Set(r.Context(), key, pngBytes, time.Duration(ttlSec)*time.Second)
+		} else {
+			_ = s.cache.Set(r.Context(), key, []byte(svg), time.Duration(ttlSec)*time.Second)
+		}
 	}
 
 	var relPath string
 	if save {
-		fn := "wordcloud_comments_" + time.Now().Format("20060102_150405") + ".svg"
+		base := "wordcloud_comments_" + time.Now().Format("20060102_150405")
 		if noteID != "" {
-			fn = "wordcloud_" + sanitizeFilename(noteID) + "_" + time.Now().Format("20060102_150405") + ".svg"
+			base = "wordcloud_" + sanitizeFilename(noteID) + "_" + time.Now().Format("20060102_150405")
 		}
-		outDir := filepath.Join(dataDir, platform)
-		if err := os.MkdirAll(outDir, 0755); err != nil {
+		paths, err := saveWordcloudAssets(dataDir, platform, base, svg, pngBytes, freq)
+		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 			return
 		}
-		full := filepath.Join(outDir, fn)
-		if err := os.WriteFile(full, []byte(svg), 0644); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-			return
+		main := paths["svg"]
+		if format == "png" && paths["png"] != "" {
+			main = paths["png"]
 		}
-		if r, err := filepath.Rel(dataDir, full); err == nil {
+		if r, err := filepath.Rel(dataDir, main); err == nil {
 			relPath = filepath.ToSlash(r)
 			w.Header().Set("x-generated-file", relPath)
 		}
 	}
 
-	w.Header().Set("content-type", "image/svg+xml; charset=utf-8")
+	if format == "png" {
+		w.Header().Set("content-type", "image/png")
+	} else {
+		w.Header().Set("content-type", "image/svg+xml; charset=utf-8")
+	}
 	if relPath != "" {
 		w.Header().Set("content-disposition", fmt.Sprintf(`inline; filename="%s"`, filepath.Base(relPath)))
 	} else {
-		w.Header().Set("content-disposition", `inline; filename="wordcloud.svg"`)
+		if format == "png" {
+			w.Header().Set("content-disposition", `inline; filename="wordcloud.png"`)
+		} else {
+			w.Header().Set("content-disposition", `inline; filename="wordcloud.svg"`)
+		}
 	}
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(svg))
+	if format == "png" {
+		_, _ = w.Write(pngBytes)
+	} else {
+		_, _ = w.Write([]byte(svg))
+	}
 }
 
 func collectCommentTexts(ctx context.Context, dataDir, platform, noteID string, max int) ([]string, error) {

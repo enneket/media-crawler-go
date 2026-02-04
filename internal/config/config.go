@@ -7,57 +7,60 @@ import (
 )
 
 type Config struct {
-	Platform             string `mapstructure:"PLATFORM"`
-	Keywords             string `mapstructure:"KEYWORDS"`
-	LoginType            string `mapstructure:"LOGIN_TYPE"`
-	LoginPhone           string `mapstructure:"LOGIN_PHONE"`
-	LoginWaitTimeoutSec  int    `mapstructure:"LOGIN_WAIT_TIMEOUT_SEC"`
-	Cookies              string `mapstructure:"COOKIES"`
-	CrawlerType          string `mapstructure:"CRAWLER_TYPE"`
-	DataDir              string `mapstructure:"DATA_DIR"`
-	StoreBackend         string `mapstructure:"STORE_BACKEND"`
-	SQLitePath           string `mapstructure:"SQLITE_PATH"`
-	MySQLDSN             string `mapstructure:"MYSQL_DSN"`
-	PostgresDSN          string `mapstructure:"POSTGRES_DSN"`
-	MongoURI             string `mapstructure:"MONGO_URI"`
-	MongoDB              string `mapstructure:"MONGO_DB"`
-	CacheBackend         string `mapstructure:"CACHE_BACKEND"`
-	CacheDefaultTTLSec   int    `mapstructure:"CACHE_DEFAULT_TTL_SEC"`
-	RedisAddr            string `mapstructure:"REDIS_ADDR"`
-	RedisPassword        string `mapstructure:"REDIS_PASSWORD"`
-	RedisDB              int    `mapstructure:"REDIS_DB"`
-	RedisKeyPrefix       string `mapstructure:"REDIS_KEY_PREFIX"`
-	LogLevel             string `mapstructure:"LOG_LEVEL"`
-	LogFormat            string `mapstructure:"LOG_FORMAT"`
-	HttpTimeoutSec       int    `mapstructure:"HTTP_TIMEOUT_SEC"`
-	HttpRetryCount       int    `mapstructure:"HTTP_RETRY_COUNT"`
-	HttpRetryBaseDelayMs int    `mapstructure:"HTTP_RETRY_BASE_DELAY_MS"`
-	HttpRetryMaxDelayMs  int    `mapstructure:"HTTP_RETRY_MAX_DELAY_MS"`
-	EnableIPProxy        bool   `mapstructure:"ENABLE_IP_PROXY"`
-	IPProxyPoolCount     int    `mapstructure:"IP_PROXY_POOL_COUNT"`
-	IPProxyProviderName  string `mapstructure:"IP_PROXY_PROVIDER_NAME"`
-	IPProxyList          string `mapstructure:"IP_PROXY_LIST"`
-	IPProxyFile          string `mapstructure:"IP_PROXY_FILE"`
-	Headless             bool   `mapstructure:"HEADLESS"`
-	SaveLoginState       bool   `mapstructure:"SAVE_LOGIN_STATE"`
-	EnableCDPMode        bool   `mapstructure:"ENABLE_CDP_MODE"`
-	CDPDebugPort         int    `mapstructure:"CDP_DEBUG_PORT"`
-	CustomBrowserPath    string `mapstructure:"CUSTOM_BROWSER_PATH"`
-	CDPHeadless          bool   `mapstructure:"CDP_HEADLESS"`
-	BrowserLaunchTimeout int    `mapstructure:"BROWSER_LAUNCH_TIMEOUT"`
-	AutoCloseBrowser     bool   `mapstructure:"AUTO_CLOSE_BROWSER"`
-	SaveDataOption       string `mapstructure:"SAVE_DATA_OPTION"`
-	UserDataDir          string `mapstructure:"USER_DATA_DIR"`
-	StartPage            int    `mapstructure:"START_PAGE"`
-	CrawlerMaxNotesCount int    `mapstructure:"CRAWLER_MAX_NOTES_COUNT"`
-	MaxConcurrencyNum    int    `mapstructure:"MAX_CONCURRENCY_NUM"`
-	EnableGetMedias      bool   `mapstructure:"ENABLE_GET_MEDIAS"`
-	EnableGetComments    bool   `mapstructure:"ENABLE_GET_COMMENTS"`
-	CrawlerMaxComments   int    `mapstructure:"CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES"`
-	EnableGetSubComments bool   `mapstructure:"ENABLE_GET_SUB_COMMENTS"`
-	CrawlerMaxSleepSec   int    `mapstructure:"CRAWLER_MAX_SLEEP_SEC"`
-	PythonCompatOutput   bool   `mapstructure:"PYTHON_COMPAT_OUTPUT"`
-	EnableGetWordcloud   bool   `mapstructure:"ENABLE_GET_WORDCLOUD"`
+	Platform             string            `mapstructure:"PLATFORM"`
+	Keywords             string            `mapstructure:"KEYWORDS"`
+	LoginType            string            `mapstructure:"LOGIN_TYPE"`
+	LoginPhone           string            `mapstructure:"LOGIN_PHONE"`
+	LoginWaitTimeoutSec  int               `mapstructure:"LOGIN_WAIT_TIMEOUT_SEC"`
+	Cookies              string            `mapstructure:"COOKIES"`
+	CrawlerType          string            `mapstructure:"CRAWLER_TYPE"`
+	DataDir              string            `mapstructure:"DATA_DIR"`
+	StoreBackend         string            `mapstructure:"STORE_BACKEND"`
+	SQLitePath           string            `mapstructure:"SQLITE_PATH"`
+	MySQLDSN             string            `mapstructure:"MYSQL_DSN"`
+	PostgresDSN          string            `mapstructure:"POSTGRES_DSN"`
+	MongoURI             string            `mapstructure:"MONGO_URI"`
+	MongoDB              string            `mapstructure:"MONGO_DB"`
+	CacheBackend         string            `mapstructure:"CACHE_BACKEND"`
+	CacheDefaultTTLSec   int               `mapstructure:"CACHE_DEFAULT_TTL_SEC"`
+	RedisAddr            string            `mapstructure:"REDIS_ADDR"`
+	RedisPassword        string            `mapstructure:"REDIS_PASSWORD"`
+	RedisDB              int               `mapstructure:"REDIS_DB"`
+	RedisKeyPrefix       string            `mapstructure:"REDIS_KEY_PREFIX"`
+	LogLevel             string            `mapstructure:"LOG_LEVEL"`
+	LogFormat            string            `mapstructure:"LOG_FORMAT"`
+	HttpTimeoutSec       int               `mapstructure:"HTTP_TIMEOUT_SEC"`
+	HttpRetryCount       int               `mapstructure:"HTTP_RETRY_COUNT"`
+	HttpRetryBaseDelayMs int               `mapstructure:"HTTP_RETRY_BASE_DELAY_MS"`
+	HttpRetryMaxDelayMs  int               `mapstructure:"HTTP_RETRY_MAX_DELAY_MS"`
+	EnableIPProxy        bool              `mapstructure:"ENABLE_IP_PROXY"`
+	IPProxyPoolCount     int               `mapstructure:"IP_PROXY_POOL_COUNT"`
+	IPProxyProviderName  string            `mapstructure:"IP_PROXY_PROVIDER_NAME"`
+	IPProxyList          string            `mapstructure:"IP_PROXY_LIST"`
+	IPProxyFile          string            `mapstructure:"IP_PROXY_FILE"`
+	Headless             bool              `mapstructure:"HEADLESS"`
+	SaveLoginState       bool              `mapstructure:"SAVE_LOGIN_STATE"`
+	EnableCDPMode        bool              `mapstructure:"ENABLE_CDP_MODE"`
+	CDPDebugPort         int               `mapstructure:"CDP_DEBUG_PORT"`
+	CustomBrowserPath    string            `mapstructure:"CUSTOM_BROWSER_PATH"`
+	CDPHeadless          bool              `mapstructure:"CDP_HEADLESS"`
+	BrowserLaunchTimeout int               `mapstructure:"BROWSER_LAUNCH_TIMEOUT"`
+	AutoCloseBrowser     bool              `mapstructure:"AUTO_CLOSE_BROWSER"`
+	SaveDataOption       string            `mapstructure:"SAVE_DATA_OPTION"`
+	UserDataDir          string            `mapstructure:"USER_DATA_DIR"`
+	StartPage            int               `mapstructure:"START_PAGE"`
+	CrawlerMaxNotesCount int               `mapstructure:"CRAWLER_MAX_NOTES_COUNT"`
+	MaxConcurrencyNum    int               `mapstructure:"MAX_CONCURRENCY_NUM"`
+	EnableGetMedias      bool              `mapstructure:"ENABLE_GET_MEDIAS"`
+	EnableGetComments    bool              `mapstructure:"ENABLE_GET_COMMENTS"`
+	CrawlerMaxComments   int               `mapstructure:"CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES"`
+	EnableGetSubComments bool              `mapstructure:"ENABLE_GET_SUB_COMMENTS"`
+	CrawlerMaxSleepSec   int               `mapstructure:"CRAWLER_MAX_SLEEP_SEC"`
+	PythonCompatOutput   bool              `mapstructure:"PYTHON_COMPAT_OUTPUT"`
+	EnableGetWordcloud   bool              `mapstructure:"ENABLE_GET_WORDCLOUD"`
+	StopWordsFile        string            `mapstructure:"STOP_WORDS_FILE"`
+	FontPath             string            `mapstructure:"FONT_PATH"`
+	CustomWords          map[string]string `mapstructure:"CUSTOM_WORDS"`
 
 	// XHS Specific
 	SortType             string   `mapstructure:"SORT_TYPE"`
@@ -148,6 +151,9 @@ func LoadConfig(path string) error {
 	viper.SetDefault("CRAWLER_MAX_SLEEP_SEC", 2)
 	viper.SetDefault("PYTHON_COMPAT_OUTPUT", false)
 	viper.SetDefault("ENABLE_GET_WORDCLOUD", false)
+	viper.SetDefault("STOP_WORDS_FILE", "")
+	viper.SetDefault("FONT_PATH", "")
+	viper.SetDefault("CUSTOM_WORDS", map[string]string{})
 	viper.SetDefault("SORT_TYPE", "popularity_descending")
 	viper.SetDefault("BILI_CREATOR_ID_LIST", []string{})
 	viper.SetDefault("BILI_SEARCH_MODE", "video")

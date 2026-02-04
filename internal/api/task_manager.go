@@ -122,14 +122,17 @@ func (m *TaskManager) Run(req RunRequest) error {
 		cfgSnapshot := config.AppConfig
 		auto := cfgSnapshot.EnableGetWordcloud && cfgSnapshot.EnableGetComments && ctx.Err() == nil
 		autoOpts := autoWordcloudOptions{
-			DataDir:      cfgSnapshot.DataDir,
-			Platform:     cfgSnapshot.Platform,
-			StoreBackend: cfgSnapshot.StoreBackend,
-			SQLitePath:   cfgSnapshot.SQLitePath,
-			MySQLDSN:     cfgSnapshot.MySQLDSN,
-			PostgresDSN:  cfgSnapshot.PostgresDSN,
-			MongoURI:     cfgSnapshot.MongoURI,
-			MongoDB:      cfgSnapshot.MongoDB,
+			DataDir:       cfgSnapshot.DataDir,
+			Platform:      cfgSnapshot.Platform,
+			StoreBackend:  cfgSnapshot.StoreBackend,
+			SQLitePath:    cfgSnapshot.SQLitePath,
+			MySQLDSN:      cfgSnapshot.MySQLDSN,
+			PostgresDSN:   cfgSnapshot.PostgresDSN,
+			MongoURI:      cfgSnapshot.MongoURI,
+			MongoDB:       cfgSnapshot.MongoDB,
+			StopWordsFile: cfgSnapshot.StopWordsFile,
+			FontPath:      cfgSnapshot.FontPath,
+			CustomWords:   cfgSnapshot.CustomWords,
 		}
 
 		m.mu.Lock()

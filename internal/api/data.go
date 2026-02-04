@@ -153,6 +153,7 @@ func listDataFiles(dataDir string, q url.Values) ([]dataFileInfo, error) {
 		".csv":   {},
 		".db":    {},
 		".svg":   {},
+		".png":   {},
 		".xlsx":  {},
 	}
 
