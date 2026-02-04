@@ -9,10 +9,10 @@
 - [x] 三种模式：search / detail / creator（各平台均有实现入口）。
 
 ### CLI / 配置
-- [x] CLI 入口：读取 config.yaml（viper）后按 PLATFORM 启动爬虫；支持 `-api` 启动 WebUI/API。
+- [x] CLI 入口：读取 config.yaml（viper）后按 PLATFORM 启动爬虫；支持 `-api` 启动 WebUI/API；支持 init-db 与常用参数覆盖。
 - [x] YAML + 环境变量加载：`MEDIA_CRAWLER_` 前缀覆盖；默认值对齐 Python 核心配置。
 - [x] HTTP 基础能力：超时/重试/退避（HTTP_TIMEOUT_SEC / HTTP_RETRY_*）。
-- [x] 代理池：kuaidaili / wandouhttp / static(list/file)，支持失效切换（403/429 等场景 InvalidateCurrent）。
+- [x] 代理池：kuaidaili / wandouhttp / jishu_http / static(list/file)，支持失效切换（403/429 等场景 InvalidateCurrent）。
 - [x] Cache：memory / redis / none（用于跨流程去重、词云缓存等）。
 - [x] CDP 模式：可复用本机 Chrome/Edge 登录态（ENABLE_CDP_MODE / CDP_DEBUG_PORT / USER_DATA_DIR 等）。
 
@@ -75,6 +75,16 @@
 
 ### CLI 形态
 - [x] CLI 参数对齐：支持 init-db 子命令，支持常用参数覆盖（cookies/inputs/keywords 等直接覆盖配置）。
+- [x] CLI 覆盖项补齐：支持 `--get_comment/--get_sub_comment/--headless/--save_data_option/--start/--max_concurrency_num` 等常用覆盖（含 `--specified_id/--creator_id` 别名）。
+
+### 反检测能力（Stealth）
+- [x] Stealth 脚本注入对齐（best-effort）：Go 版在 xhs/douyin 的 Playwright/CDP 上注入统一 init script（含 webdriver/languages/plugins/permissions/webgl 等常见特征处理）。
+
+### CDP 端口选择
+- [x] CDP DebugPort 自动回退：按配置端口作为起点探测可用端口并回退，避免端口被占用导致启动失败。
+
+### 词云能力细节
+- [ ] 词云质量对齐：Python 版使用 jieba 分词 + 可配置停用词文件/自定义词 + 输出 PNG/词频 JSON；Go 版当前为简化 token（单字汉字）+ 内置 stopwords + 输出 SVG。
 
 ## 开发任务清单（可执行）
 - [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
@@ -92,3 +102,7 @@
 - [x] T-302 统一代理接入：所有平台 HTTP client 统一走代理池。
 - [x] T-303 词云 DB 覆盖：支持从 mysql/postgres/mongodb 读取评论数据生成词云。
 - [x] T-304 丰富 CLI：补齐 init_db 与常用参数覆盖/子命令体系。
+- [x] T-401 反检测对齐：注入统一 stealth init script（best-effort）。
+- [x] T-402 CDP 端口对齐：自动探测可用 DebugPort 并回退。
+- [ ] T-403 词云对齐：支持停用词/自定义词/更合理中文分词，并补齐 PNG/词频输出。
+- [x] T-404 CLI 覆盖对齐：补齐评论/子评论/Headless/CDP/词云等运行开关的 CLI 覆盖。

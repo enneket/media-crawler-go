@@ -57,8 +57,11 @@ type overrides struct {
 	mode          string
 	keywords      string
 	inputs        string
+	specifiedID   string
+	creatorID     string
 	startPage     int
 	maxNotes      int
+	maxComments   int
 	concurrency   int
 	cookies       string
 	loginType     string
@@ -76,6 +79,15 @@ type overrides struct {
 	proxyPoolCnt  int
 	proxyList     string
 	proxyFile     string
+	getComment    optionalBool
+	getSubComment optionalBool
+	headless      optionalBool
+	enableCDPMode optionalBool
+	cdpHeadless   optionalBool
+	saveLogin     optionalBool
+	getMedias     optionalBool
+	getWordcloud  optionalBool
+	pythonCompat  optionalBool
 }
 
 func splitCSV(s string) []string {
@@ -108,6 +120,15 @@ func applyOverrides(cfg *config.Config, o overrides) {
 	if v := strings.TrimSpace(o.keywords); v != "" {
 		cfg.Keywords = v
 	}
+	if o.getComment.set {
+		cfg.EnableGetComments = o.getComment.value
+	}
+	if o.getSubComment.set {
+		cfg.EnableGetSubComments = o.getSubComment.value
+	}
+	if o.headless.set {
+		cfg.Headless = o.headless.value
+	}
 	if v := strings.TrimSpace(o.cookies); v != "" {
 		cfg.Cookies = v
 	}
@@ -119,6 +140,24 @@ func applyOverrides(cfg *config.Config, o overrides) {
 	}
 	if v := strings.TrimSpace(o.dataDir); v != "" {
 		cfg.DataDir = v
+	}
+	if o.enableCDPMode.set {
+		cfg.EnableCDPMode = o.enableCDPMode.value
+	}
+	if o.cdpHeadless.set {
+		cfg.CDPHeadless = o.cdpHeadless.value
+	}
+	if o.saveLogin.set {
+		cfg.SaveLoginState = o.saveLogin.value
+	}
+	if o.getMedias.set {
+		cfg.EnableGetMedias = o.getMedias.value
+	}
+	if o.getWordcloud.set {
+		cfg.EnableGetWordcloud = o.getWordcloud.value
+	}
+	if o.pythonCompat.set {
+		cfg.PythonCompatOutput = o.pythonCompat.value
 	}
 	if v := strings.TrimSpace(o.storeBackend); v != "" {
 		cfg.StoreBackend = v
@@ -162,11 +201,26 @@ func applyOverrides(cfg *config.Config, o overrides) {
 	if o.maxNotes > 0 {
 		cfg.CrawlerMaxNotesCount = o.maxNotes
 	}
+	if o.maxComments > 0 {
+		cfg.CrawlerMaxComments = o.maxComments
+	}
 	if o.concurrency > 0 {
 		cfg.MaxConcurrencyNum = o.concurrency
 	}
-	if v := strings.TrimSpace(o.inputs); v != "" {
-		items := splitCSV(v)
+
+	in := strings.TrimSpace(o.inputs)
+	if in == "" {
+		mode := strings.ToLower(strings.TrimSpace(cfg.CrawlerType))
+		if mode == "detail" && strings.TrimSpace(o.specifiedID) != "" {
+			in = strings.TrimSpace(o.specifiedID)
+		}
+		if mode == "creator" && strings.TrimSpace(o.creatorID) != "" {
+			in = strings.TrimSpace(o.creatorID)
+		}
+	}
+
+	if in != "" {
+		items := splitCSV(in)
 		platform := strings.ToLower(strings.TrimSpace(cfg.Platform))
 		mode := strings.ToLower(strings.TrimSpace(cfg.CrawlerType))
 		switch platform {
@@ -223,11 +277,27 @@ func registerRunFlags(fs *flag.FlagSet, o *overrides) {
 	fs.StringVar(&o.mode, "crawler_type", "", "mode: search/detail/creator")
 	fs.StringVar(&o.keywords, "keywords", "", "keywords csv")
 	fs.StringVar(&o.inputs, "inputs", "", "inputs csv (meaning depends on platform+mode)")
+	fs.StringVar(&o.specifiedID, "specified_id", "", "detail inputs csv (alias of -inputs)")
+	fs.StringVar(&o.creatorID, "creator_id", "", "creator inputs csv (alias of -inputs)")
+	fs.Var(&o.getComment, "get_comment", "enable get comments")
+	fs.Var(&o.getSubComment, "get_sub_comment", "enable get sub comments")
+	fs.Var(&o.headless, "headless", "enable headless (persistent context)")
+	fs.Var(&o.enableCDPMode, "enable_cdp_mode", "enable cdp mode")
+	fs.Var(&o.cdpHeadless, "cdp_headless", "enable headless in cdp mode")
+	fs.Var(&o.saveLogin, "save_login_state", "save login state")
+	fs.Var(&o.getMedias, "get_medias", "enable media download")
+	fs.Var(&o.getWordcloud, "get_wordcloud", "enable wordcloud")
+	fs.Var(&o.pythonCompat, "python_compat_output", "enable python compatible output")
 	fs.IntVar(&o.startPage, "start_page", 0, "start page")
+	fs.IntVar(&o.startPage, "start", 0, "start page")
 	fs.IntVar(&o.maxNotes, "max_notes", 0, "max notes")
+	fs.IntVar(&o.maxNotes, "max_notes_count", 0, "max notes")
+	fs.IntVar(&o.maxComments, "max_comments_count_singlenotes", 0, "max comments per note")
 	fs.IntVar(&o.concurrency, "concurrency", 0, "max concurrency")
+	fs.IntVar(&o.concurrency, "max_concurrency_num", 0, "max concurrency")
 	fs.StringVar(&o.cookies, "cookies", "", "cookie header string")
 	fs.StringVar(&o.loginType, "login_type", "", "login type: qrcode/phone/cookie")
+	fs.StringVar(&o.loginType, "lt", "", "login type: qrcode/phone/cookie")
 	fs.StringVar(&o.loginPhone, "login_phone", "", "login phone")
 	fs.StringVar(&o.dataDir, "data_dir", "", "data dir")
 	fs.Var(&o.enableIPProxy, "enable_ip_proxy", "enable ip proxy")

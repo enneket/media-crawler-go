@@ -503,7 +503,7 @@ func (c *XhsCrawler) fetchAndSaveCreator(userID string) error {
 	}
 	defer page.Close()
 
-	page.AddInitScript(playwright.Script{Content: playwright.String("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")})
+	_ = browser.InjectStealthToPage(page)
 
 	url := fmt.Sprintf("https://www.xiaohongshu.com/user/profile/%s", userID)
 	if _, err := page.Goto(url); err != nil {
@@ -879,7 +879,8 @@ func (c *XhsCrawler) initBrowser() error {
 			c.cdpBrowser = sess.Browser
 			c.browser = sess.Context
 			c.page = sess.Page
-			c.page.AddInitScript(playwright.Script{Content: playwright.String("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")})
+			_ = browser.InjectStealthToContext(c.browser)
+			_ = browser.InjectStealthToPage(c.page)
 			return nil
 		}
 		logger.Warn("cdp mode init failed; falling back to persistent context", "err", err)
@@ -903,7 +904,7 @@ func (c *XhsCrawler) initBrowser() error {
 		}
 	}
 
-	browser, err := pw.Chromium.LaunchPersistentContext(userDataDir, launchOpts)
+	browserCtx, err := pw.Chromium.LaunchPersistentContext(userDataDir, launchOpts)
 	if err != nil {
 		fallbackOpts := playwright.BrowserTypeLaunchPersistentContextOptions{
 			Headless: playwright.Bool(config.AppConfig.Headless),
@@ -921,25 +922,26 @@ func (c *XhsCrawler) initBrowser() error {
 				fallbackOpts.Proxy.Password = playwright.String(c.proxy.Password)
 			}
 		}
-		browser, err = pw.Chromium.LaunchPersistentContext(userDataDir, fallbackOpts)
+		browserCtx, err = pw.Chromium.LaunchPersistentContext(userDataDir, fallbackOpts)
 		if err != nil {
 			return fmt.Errorf("could not launch browser: %v", err)
 		}
 	}
-	c.browser = browser
+	c.browser = browserCtx
 
-	pages := browser.Pages()
+	pages := browserCtx.Pages()
 	if len(pages) > 0 {
 		c.page = pages[0]
 	} else {
-		page, err := browser.NewPage()
+		page, err := browserCtx.NewPage()
 		if err != nil {
 			return fmt.Errorf("could not create page: %v", err)
 		}
 		c.page = page
 	}
 
-	c.page.AddInitScript(playwright.Script{Content: playwright.String("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")})
+	_ = browser.InjectStealthToContext(c.browser)
+	_ = browser.InjectStealthToPage(c.page)
 
 	return nil
 }

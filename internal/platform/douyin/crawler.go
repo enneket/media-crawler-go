@@ -130,7 +130,8 @@ func (c *DouyinCrawler) initBrowser(ctx context.Context) error {
 			c.cdpBrowser = sess.Browser
 			c.browser = sess.Context
 			c.page = sess.Page
-			c.page.AddInitScript(playwright.Script{Content: playwright.String("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")})
+			_ = browser.InjectStealthToContext(c.browser)
+			_ = browser.InjectStealthToPage(c.page)
 			return nil
 		}
 		logger.Warn("cdp mode init failed; falling back to persistent context", "err", err)
@@ -162,7 +163,8 @@ func (c *DouyinCrawler) initBrowser(ctx context.Context) error {
 		}
 		c.page = page
 	}
-	c.page.AddInitScript(playwright.Script{Content: playwright.String("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")})
+	_ = browser.InjectStealthToContext(c.browser)
+	_ = browser.InjectStealthToPage(c.page)
 	return nil
 }
 

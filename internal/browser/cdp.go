@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -56,6 +57,13 @@ func StartOrConnectCDP(ctx context.Context, pw *playwright.Playwright, opts CDPO
 	var cmd *exec.Cmd
 
 	if err := waitCDPReady(ctx, endpoint, 800*time.Millisecond); err != nil {
+		port, err2 := findAvailablePort(opts.DebugPort, 100)
+		if err2 != nil {
+			return nil, err2
+		}
+		opts.DebugPort = port
+		endpoint = fmt.Sprintf("http://127.0.0.1:%d", opts.DebugPort)
+
 		bin, err := detectBrowserBinary(opts.CustomBrowserPath)
 		if err != nil {
 			return nil, err
@@ -180,4 +188,23 @@ func buildChromeArgs(port int, userDataDir string, headless bool, proxyServer st
 	}
 
 	return args
+}
+
+func findAvailablePort(start int, maxTries int) (int, error) {
+	if start <= 0 {
+		start = 9222
+	}
+	if maxTries <= 0 {
+		maxTries = 100
+	}
+	for i := 0; i < maxTries; i++ {
+		port := start + i
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			continue
+		}
+		_ = ln.Close()
+		return port, nil
+	}
+	return 0, fmt.Errorf("no available port from %d within %d tries", start, maxTries)
 }
