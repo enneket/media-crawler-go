@@ -58,10 +58,10 @@
 - [x] 对齐（或明确文档差异）JSON 输出语义与目录结构：新增 `PYTHON_COMPAT_OUTPUT=true` 时输出“数组写回 + data/{platform}/json/...”，默认仍保留 Go 的 per-note/jsonl 结构。
 
 ### 词云触发方式
-- [ ] 评估是否提供“任务结束自动生成词云”的能力（Python 在 json 模式会自动生成；Go 当前通过 /data/wordcloud 手动触发）。
+- [x] 任务结束自动生成词云：新增 `ENABLE_GET_WORDCLOUD=true` 时任务结束自动生成（同时保留 /data/wordcloud 手动触发）。
 
 ### 登录说明
-- [ ] 细化“各平台支持的登录形态”说明：Go 的 phone/qrcode 自动化流程目前主要覆盖 xhs/douyin，其它平台通常仅依赖 COOKIES（HTTP client）。
+- [x] 细化“各平台支持的登录形态”说明：README 已补充各平台支持范围（xhs/douyin 支持 qrcode/phone/cookie，其它平台一般为 cookie）。
 
 ## 开发任务清单（可执行）
 - [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。

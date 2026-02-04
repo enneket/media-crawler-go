@@ -35,6 +35,9 @@ Create a `config.yaml` file in the root directory (see `config.example.yaml`).
 Notes:
 - If `HEADLESS: true`, you must use `LOGIN_TYPE: cookie` and provide `COOKIES`.
 - `LOGIN_TYPE: qrcode/phone` relies on completing login manually in the opened browser window; the crawler waits up to `LOGIN_WAIT_TIMEOUT_SEC`. If `LOGIN_TYPE: phone` and `LOGIN_PHONE` is set, it will try to prefill the phone input (best-effort).
+- Login support by platform (best-effort):
+  - xhs/douyin: qrcode / phone / cookie
+  - bilibili/weibo/tieba/zhihu/kuaishou: cookie (HTTP client)
 - Proxy: set `ENABLE_IP_PROXY: true`. `IP_PROXY_PROVIDER_NAME` supports `kuaidaili`, `wandouhttp`, and `static` (use `IP_PROXY_LIST` or `IP_PROXY_FILE`).
 - `SAVE_DATA_OPTION`: `json` / `csv` / `xlsx` (`excel` is accepted as an alias for Python compatibility).
 - `PYTHON_COMPAT_OUTPUT: true` will additionally write Python-style JSON arrays to `data/<platform>/json/<crawler_type>_<item_type>_<date>.json`.
