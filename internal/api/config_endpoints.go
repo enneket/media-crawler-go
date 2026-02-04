@@ -32,7 +32,7 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 		"crawler_types":    []string{"search", "detail", "creator"},
 		"login_types":      []string{"qrcode", "phone", "cookie"},
 		"store_backends":   []string{"file", "sqlite", "mysql", "postgres", "mongodb"},
-		"save_data_option": []string{"json", "csv", "xlsx", "excel"},
+		"save_data_option": []string{"json", "csv", "xlsx", "xlsx_book", "excel"},
 		"proxy_providers":  []string{"kuaidaili", "wandouhttp", "jisuhttp", "jishuhttp", "jishu_http", "static"},
 		"cache_backends":   []string{"memory", "redis", "none"},
 		"bili_search_mode": []string{"video"},

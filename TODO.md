@@ -57,7 +57,7 @@
 - [x] 补齐媒体下载的平台覆盖：weibo / bilibili（已补齐；当前为 best-effort，bilibili 视频下载依赖 /x/player/playurl 可用性）。
 
 ### 存储/落盘格式
-- [x] 兼容 Python 的 `SAVE_DATA_OPTION=excel`（已支持 excel 作为 xlsx 别名，并在 /config/options 暴露 excel）。
+- [x] 兼容 Python 的 `SAVE_DATA_OPTION=excel`：支持 excel 映射为 `xlsx_book`（单文件多 Sheet），并在 /config/options 暴露 excel。
 - [x] 对齐（或明确文档差异）JSON 输出语义与目录结构：新增 `PYTHON_COMPAT_OUTPUT=true` 时输出“数组写回 + data/{platform}/json/...”，默认仍保留 Go 的 per-note/jsonl 结构。
 
 ### 词云触发方式
@@ -102,7 +102,7 @@
 - [ ] 支持注入完整 stealth.min.js：支持通过配置指定脚本路径（默认 best-effort 脚本），便于对齐 Python 版注入策略。
 
 ### Excel 导出体验
-- [ ] Excel 单文件多 Sheet：contents/comments/creators 分 Sheet，补齐样式（表头样式/自动列宽/边框/换行），对齐 Python 版导出体验。
+- [x] Excel 单文件多 Sheet（best-effort）：新增 `SAVE_DATA_OPTION=excel` 映射为 `xlsx_book`，输出单个 workbook（Contents/Comments/Creators），含表头样式/冻结首行/自动列宽。
 
 ### 存储语义一致性
 - [ ] 统一/澄清 STORE_BACKEND 与 SAVE_DATA_OPTION：补充文档与 CLI 说明，减少与 Python `SAVE_DATA_OPTION` 的认知差异。
@@ -131,5 +131,5 @@
 - [ ] T-502 快手评论全量翻页与稳定抓取。
 - [ ] T-503 媒体下载稳定性增强：B 站/微博。
 - [ ] T-504 Stealth 强度增强：支持配置完整 stealth.min.js 注入。
-- [ ] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化。
+- [x] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化（best-effort）。
 - [ ] T-506 存储语义对齐：文档/CLI 说明与默认策略优化。

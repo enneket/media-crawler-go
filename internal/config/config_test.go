@@ -22,8 +22,8 @@ func TestLoadConfig_SaveDataOptionExcelAlias(t *testing.T) {
 		t.Fatalf("LoadConfig: %v", err)
 	}
 
-	if AppConfig.SaveDataOption != "xlsx" {
-		t.Fatalf("SaveDataOption = %q, want %q", AppConfig.SaveDataOption, "xlsx")
+	if AppConfig.SaveDataOption != "xlsx_book" {
+		t.Fatalf("SaveDataOption = %q, want %q", AppConfig.SaveDataOption, "xlsx_book")
 	}
 	if AppConfig.StoreBackend != "mongodb" {
 		t.Fatalf("StoreBackend = %q, want %q", AppConfig.StoreBackend, "mongodb")
@@ -35,4 +35,3 @@ func TestLoadConfig_SaveDataOptionExcelAlias(t *testing.T) {
 		t.Fatalf("LoginType = %q, want %q", AppConfig.LoginType, "cookie")
 	}
 }
-

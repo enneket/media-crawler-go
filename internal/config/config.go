@@ -199,7 +199,7 @@ func Normalize(cfg *Config) {
 	}
 	cfg.SaveDataOption = strings.ToLower(strings.TrimSpace(cfg.SaveDataOption))
 	if cfg.SaveDataOption == "excel" {
-		cfg.SaveDataOption = "xlsx"
+		cfg.SaveDataOption = "xlsx_book"
 	}
 	cfg.StoreBackend = strings.ToLower(strings.TrimSpace(cfg.StoreBackend))
 	cfg.CrawlerType = strings.ToLower(strings.TrimSpace(cfg.CrawlerType))

@@ -44,6 +44,10 @@ func SaveNoteDetail(noteID string, note interface{}) error {
 	if err := sqlUpsertNote(noteID, note); err != nil {
 		return err
 	}
+
+	if config.AppConfig.SaveDataOption == "xlsx_book" {
+		return AppendBookContents(noteID, note)
+	}
 	dir := NoteDir(noteID)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err

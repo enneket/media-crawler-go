@@ -174,6 +174,35 @@ func (c *Crawler) fetchAndSaveStatus(ctx context.Context, id string, noteID stri
 		); err != nil {
 			logger.Error("save weibo global comments csv failed", "note_id", noteID, "err", err)
 		}
+	case "xlsx_book":
+		globalItems := make([]any, 0, len(comments))
+		for i := range comments {
+			globalItems = append(globalItems, &store.UnifiedComment{
+				Platform:        "weibo",
+				NoteID:          noteID,
+				CommentID:       comments[i].CommentID,
+				ParentCommentID: comments[i].ParentCommentID,
+				Content:         comments[i].Content,
+				CreateTime:      comments[i].CreateTime,
+				LikeCount:       comments[i].LikeCount,
+				UserID:          comments[i].UserID,
+				UserNickname:    comments[i].UserNickname,
+			})
+		}
+		if _, err := store.AppendUniqueGlobalCommentsBook(
+			globalItems,
+			func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+			(&store.UnifiedComment{}).CSVHeader(),
+			func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+		); err != nil {
+			logger.Error("save weibo global comments xlsx_book failed", "note_id", noteID, "err", err)
+		}
+		if _, err := store.AppendUniqueGlobalCommentsJSONL(
+			globalItems,
+			func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+		); err != nil {
+			logger.Error("save weibo global comments jsonl failed", "note_id", noteID, "err", err)
+		}
 	case "xlsx":
 		items := make([]any, 0, len(comments))
 		globalItems := make([]any, 0, len(comments))

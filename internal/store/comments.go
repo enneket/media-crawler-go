@@ -68,3 +68,7 @@ func AppendUniqueGlobalCommentsCSV(items []any, keyFn func(any) (string, error),
 func AppendUniqueGlobalCommentsXLSX(items []any, keyFn func(any) (string, error), header []string, rowFn func(any) ([]string, error)) (int, error) {
 	return AppendUniqueXLSX(PlatformDir(), "comments.xlsx", "comments.global.idx", items, keyFn, header, rowFn)
 }
+
+func AppendUniqueGlobalCommentsBook(items []any, keyFn func(any) (string, error), header []string, rowFn func(any) ([]string, error)) (int, error) {
+	return AppendUniqueBookSheetRows("Comments", "comments.book.idx", items, keyFn, header, rowFn)
+}

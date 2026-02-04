@@ -631,6 +631,37 @@ func (c *XhsCrawler) processNote(ctx context.Context, noteId, xsecSource, xsecTo
 				if err != nil {
 					logger.Error("save global comments csv failed", "note_id", noteId, "err", err)
 				}
+			} else if config.AppConfig.SaveDataOption == "xlsx_book" {
+				globalItems := make([]any, 0, len(comments))
+				for i := range comments {
+					comment := comments[i]
+					comment.NoteId = noteId
+					globalItems = append(globalItems, &store.UnifiedComment{
+						Platform:     "xhs",
+						NoteID:       noteId,
+						CommentID:    comment.Id,
+						Content:      comment.Content,
+						CreateTime:   comment.CreateTime,
+						UserID:       comment.User.UserId,
+						UserNickname: comment.User.Nickname,
+					})
+				}
+				_, err := store.AppendUniqueGlobalCommentsBook(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+					(&store.UnifiedComment{}).CSVHeader(),
+					func(item any) ([]string, error) { return item.(*store.UnifiedComment).ToCSV(), nil },
+				)
+				if err != nil {
+					logger.Error("save global comments xlsx_book failed", "note_id", noteId, "err", err)
+				}
+				_, err = store.AppendUniqueGlobalCommentsJSONL(
+					globalItems,
+					func(item any) (string, error) { return item.(*store.UnifiedComment).CommentID, nil },
+				)
+				if err != nil {
+					logger.Error("save global comments jsonl failed", "note_id", noteId, "err", err)
+				}
 			} else if config.AppConfig.SaveDataOption == "xlsx" {
 				items := make([]any, 0, len(comments))
 				globalItems := make([]any, 0, len(comments))

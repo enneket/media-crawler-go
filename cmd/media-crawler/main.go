@@ -309,7 +309,7 @@ func registerRunFlags(fs *flag.FlagSet, o *overrides) {
 
 func registerStoreFlags(fs *flag.FlagSet, o *overrides) {
 	fs.StringVar(&o.storeBackend, "store_backend", "", "store backend: file/sqlite/mysql/postgres/mongodb")
-	fs.StringVar(&o.saveData, "save_data_option", "", "save option: json/csv/xlsx/excel")
+	fs.StringVar(&o.saveData, "save_data_option", "", "save option: json/csv/xlsx/xlsx_book/excel")
 	fs.StringVar(&o.sqlitePath, "sqlite_path", "", "sqlite db path")
 	fs.StringVar(&o.mysqlDSN, "mysql_dsn", "", "mysql dsn")
 	fs.StringVar(&o.postgresDSN, "postgres_dsn", "", "postgres dsn")
@@ -383,6 +383,7 @@ func main() {
 	}
 
 	logger.Info("starting crawler", "platform", config.AppConfig.Platform)
+	store.BeginRunWorkbook()
 
 	r, err := platform.New(config.AppConfig.Platform)
 	if err != nil {

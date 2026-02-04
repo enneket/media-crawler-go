@@ -7,6 +7,7 @@ import (
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/platform"
+	"media-crawler-go/internal/store"
 	"strings"
 	"sync"
 	"time"
@@ -187,6 +188,7 @@ func (m *TaskManager) Stop() bool {
 }
 
 func runCrawler(ctx context.Context) (crawler.Result, error) {
+	store.BeginRunWorkbook()
 	r, err := platform.New(config.AppConfig.Platform)
 	if err != nil {
 		return crawler.Result{}, err
@@ -278,7 +280,7 @@ func validateRunConfig(cfg config.Config) error {
 	if v := strings.ToLower(strings.TrimSpace(cfg.StoreBackend)); v != "" && v != "file" && v != "sqlite" && v != "mysql" && v != "postgres" && v != "mongodb" {
 		return ValidationError{Msg: fmt.Sprintf("invalid store_backend: %s", cfg.StoreBackend)}
 	}
-	if v := strings.ToLower(strings.TrimSpace(cfg.SaveDataOption)); v != "" && v != "json" && v != "csv" && v != "xlsx" && v != "excel" {
+	if v := strings.ToLower(strings.TrimSpace(cfg.SaveDataOption)); v != "" && v != "json" && v != "csv" && v != "xlsx" && v != "excel" && v != "xlsx_book" {
 		return ValidationError{Msg: fmt.Sprintf("invalid save_data_option: %s", cfg.SaveDataOption)}
 	}
 

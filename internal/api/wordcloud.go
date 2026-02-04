@@ -301,6 +301,46 @@ func collectCommentTextsFromFiles(ctx context.Context, dataDir, platform, noteID
 	if len(out) > max {
 		out = out[:max]
 	}
+	if len(out) == 0 {
+		globalPath := filepath.Join(dataDir, platform, "comments.jsonl")
+		if _, err := os.Stat(globalPath); err == nil {
+			f, err := os.Open(globalPath)
+			if err == nil {
+				defer f.Close()
+				sc := bufio.NewScanner(f)
+				buf := make([]byte, 0, 1024*1024)
+				sc.Buffer(buf, 4*1024*1024)
+				for sc.Scan() {
+					select {
+					case <-ctx.Done():
+						return out, ctx.Err()
+					default:
+					}
+					line := strings.TrimSpace(sc.Text())
+					if line == "" {
+						continue
+					}
+					var m map[string]any
+					if err := json.Unmarshal([]byte(line), &m); err != nil {
+						continue
+					}
+					if strings.TrimSpace(noteID) != "" {
+						if nid := extractCommentNoteIDAny(m); nid != "" && nid != noteID {
+							continue
+						}
+					}
+					text := extractCommentTextAny(m)
+					if strings.TrimSpace(text) == "" {
+						continue
+					}
+					out = append(out, text)
+					if len(out) >= max {
+						break
+					}
+				}
+			}
+		}
+	}
 	return out, nil
 }
 
@@ -322,12 +362,12 @@ func extractCommentTextJSON(b []byte) string {
 func extractCommentTextAny(v any) string {
 	switch vv := v.(type) {
 	case map[string]any:
-		for _, k := range []string{"content", "text", "comment", "message", "desc"} {
+		for _, k := range []string{"content", "Content", "text", "Text", "comment", "Comment", "message", "Message", "desc", "Desc"} {
 			if s, ok := vv[k].(string); ok && strings.TrimSpace(s) != "" {
 				return s
 			}
 		}
-		for _, k := range []string{"data", "comment"} {
+		for _, k := range []string{"data", "Data", "comment", "Comment"} {
 			if inner, ok := vv[k]; ok {
 				if s := extractCommentTextAny(inner); strings.TrimSpace(s) != "" {
 					return s
@@ -337,6 +377,20 @@ func extractCommentTextAny(v any) string {
 	case []any:
 		for _, it := range vv {
 			if s := extractCommentTextAny(it); strings.TrimSpace(s) != "" {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+func extractCommentNoteIDAny(v any) string {
+	if v == nil {
+		return ""
+	}
+	if m, ok := v.(map[string]any); ok {
+		for _, k := range []string{"note_id", "noteId", "NoteID", "NoteId"} {
+			if s, ok := m[k].(string); ok && strings.TrimSpace(s) != "" {
 				return s
 			}
 		}

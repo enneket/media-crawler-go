@@ -152,6 +152,9 @@ func SaveCreator(userID string, creator interface{}) error {
 	if err := sqlUpsertCreator(userID, creator); err != nil {
 		return err
 	}
+	if config.AppConfig.SaveDataOption == "xlsx_book" {
+		return AppendBookCreator(userID, creator)
+	}
 	s := GetStore()
 	date := time.Now().Format("2006-01-02")
 	ext := "json"
