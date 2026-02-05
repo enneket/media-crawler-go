@@ -48,10 +48,18 @@
 - WebUI / API：FastAPI + 静态 WebUI 资源
 - CDP：支持 CDP 模式复用本机浏览器登录态
 
-## 与 Python 版差异（未完成/需确认）
+## 与 Python 版差异（功能一致口径下可忽略）
+
+功能一致口径：以 Python 版开源项目“对外可用能力”为准（7 平台 + search/detail/creator + 评论/子评开关 + 媒体下载开关 + 词云开关 + 代理池 + 多种落盘/DB 后端 + WebUI 数据预览/下载/统计）。不要求兼容 Python 的接口路径、字段名、以及 DB 的列式多表设计。
 
 ### 评论覆盖
 - [x] 补齐评论抓取的平台覆盖：zhihu / kuaishou（已补齐；支持全量翻页 best-effort：优先 API 翻页，失败回退 HTML 初始数据解析）。
+
+### API 兼容层（可选）
+- [ ] （可选）增加 Python 版 API 兼容路由：`/crawler/start`、`/crawler/stop`、`/crawler/status`（保留现有 `/run`、`/stop`、`/status`）。
+- [ ] （可选）兼容 Python 版请求字段命名：`login_type/save_option/specified_ids/creator_ids/enable_comments/...` 映射到 Go 的 RunRequest/Config。
+- [ ] （可选）增加 Python 版 `/api` 前缀兼容：`/api/health`、`/api/env/check`、`/api/config/*`、`/api/data/*`、`/api/logs`、`/api/ws/*`（保持现有无前缀路由不变）。
+- [ ] （可选）对齐 Python `/api/env/check` 语义：执行依赖/环境探测（Playwright/浏览器/权限）并返回可读错误，而不仅是版本信息。
 
 ### 媒体下载覆盖
 - [x] 补齐媒体下载的平台覆盖：weibo / bilibili（已补齐；当前为 best-effort，bilibili 视频下载依赖 /x/player/playurl 可用性）。
@@ -60,11 +68,17 @@
 - [x] 兼容 Python 的 `SAVE_DATA_OPTION=excel`：支持 excel 映射为 `xlsx_book`（单文件多 Sheet），并在 /config/options 暴露 excel。
 - [x] 对齐（或明确文档差异）JSON 输出语义与目录结构：新增 `PYTHON_COMPAT_OUTPUT=true` 时输出“数组写回 + data/{platform}/json/...”，默认仍保留 Go 的 per-note/jsonl 结构。
 
+### SaveDataOption 兼容（可选）
+- [ ] （可选）CLI/API 兼容 Python `save_option=db/sqlite/postgres/mongodb`：自动映射到 `STORE_BACKEND`（并保持 `SAVE_DATA_OPTION` 仅表示文件格式）。
+
 ### 词云触发方式
 - [x] 任务结束自动生成词云：新增 `ENABLE_GET_WORDCLOUD=true` 时任务结束自动生成（同时保留 /data/wordcloud 手动触发）。
 
 ### 登录说明
 - [x] 细化“各平台支持的登录形态”说明：README 已补充各平台支持范围（xhs/douyin 支持 qrcode/phone/cookie，其它平台一般为 cookie）。
+
+### Phone 登录自动化（验证码回填）
+- [ ] （可选）对齐 Python 的短信转发登录链路：提供 SMS Webhook（接收短信内容提取验证码）+ Redis 缓存，并在 xhs/douyin `LOGIN_TYPE=phone` 时自动回填验证码。
 
 ### 代理能力对齐
 - [x] 代理供应商对齐：补齐 Python 版的 `jishu_http` provider（支持 jisuhttp/jishuhttp/jishu_http）。
@@ -85,6 +99,15 @@
 
 ### 词云能力细节
 - [x] 词云质量对齐（best-effort）：支持 STOP_WORDS_FILE/CUSTOM_WORDS/FONT_PATH，保存 PNG 与词频 JSON；分词为“汉字段 + 停用词切分 + 自定义词匹配”的简化实现。
+
+### B 站高级配置（需确认是否要完全对齐）
+- [ ] （可选）对齐 Python bilibili 高级项：`BILI_QN`（清晰度）、`START_DAY/END_DAY`（时间范围过滤）、`MAX_NOTES_PER_DAY`（按日上限）、动态/联系人等扩展抓取项（如仍需要）。
+
+### 数据库结构化程度（可选差异）
+- [ ] （可选）对齐 Python 的“按平台多表 + 列级字段”的关系型 schema（或明确不对齐）：Go 版当前为统一表 + data_json，便于归档但不利于复杂 SQL 分析。
+
+### Excel 导出（可选）
+- [ ] （可选）对齐 Python Excel 额外 Sheet：B 站支持导出 Contacts/Dynamics（如仍需要，且 Go 侧已采集到对应数据）。
 
 ## 体验差异（待增强，不影响主功能）
 
@@ -109,7 +132,7 @@
 
 ## 开发任务清单（可执行）
 - [x] T-101 增加 MongoDB 存储后端（store + /config/options 对齐）。
-- [x] T-102 对齐 comments 的 CSV/XLSX：引入统一 Comment 结构并改造各平台落盘（当前仅 xhs/douyin 有评论抓取）。
+- [x] T-102 对齐 comments 的 CSV/XLSX：引入统一 Comment 结构并改造各平台落盘（已覆盖 7 平台，含二级评论开关）。
 - [x] T-103 补齐登录流程：phone/qrcode 已尝试自动切换登录方式（best-effort）。
 - [x] T-104 落地 LOGIN_PHONE：phone 登录时尝试自动填充手机号（xhs/douyin）。
 - [x] T-105 代理供应商按需扩展：新增 static provider 支持自定义代理列表/文件。
@@ -133,3 +156,11 @@
 - [x] T-504 Stealth 强度增强（best-effort）：支持配置完整 stealth.min.js 注入与路径解析增强。
 - [x] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化（best-effort）。
 - [x] T-506 存储语义对齐（best-effort）：补充 README 与 /config/options 说明，明确 STORE_BACKEND（是否写 DB）与 SAVE_DATA_OPTION（文件格式）职责边界，并增加 xlsx_book/excel 的解释。
+- [ ] （可选）T-601 Python API 兼容路由：增加 `/crawler/start|stop|status` 并兼容字段映射。
+- [ ] （可选）T-602 Phone 登录自动化：增加 SMS Webhook + Redis 验证码缓存，xhs/douyin 自动回填验证码。
+- [ ] （可选）T-603 SaveDataOption 兼容：接受 python `save_option=db/sqlite/postgres/mongodb` 并映射 `STORE_BACKEND`。
+- [ ] （可选）T-604 B 站高级配置对齐：补齐 `BILI_QN`、`START_DAY/END_DAY` 与扩展抓取项（如仍需要）。
+- [ ] （可选）T-605 Python API 前缀兼容：增加 `/api/*` 路由别名与 WS 别名，保持现有接口不变。
+- [ ] （可选）T-606 结构化 DB schema 评估：确定是否要对齐 Python 的多表列式设计，并给出方案。
+- [ ] （可选）T-607 EnvCheck 对齐：实现依赖探测版 `/api/env/check`（Playwright/浏览器/CDP 端口/权限等）。
+- [ ] （可选）T-608 Excel 扩展：B 站 Contacts/Dynamics 导出与落盘（如仍需要）。

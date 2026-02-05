@@ -35,6 +35,15 @@ type RunRequest struct {
 	CrawlerType string `json:"crawler_type,omitempty"`
 	Keywords    string `json:"keywords,omitempty"`
 
+	LoginType  string `json:"login_type,omitempty"`
+	LoginPhone string `json:"login_phone,omitempty"`
+	Cookies    string `json:"cookies,omitempty"`
+	Headless   *bool  `json:"headless,omitempty"`
+
+	StartPage         *int  `json:"start_page,omitempty"`
+	EnableComments    *bool `json:"enable_comments,omitempty"`
+	EnableSubComments *bool `json:"enable_sub_comments,omitempty"`
+
 	XhsSpecifiedNoteUrls []string `json:"xhs_specified_note_url_list,omitempty"`
 	XhsCreatorIdList     []string `json:"xhs_creator_id_list,omitempty"`
 
@@ -209,6 +218,27 @@ func applyRunRequestToConfig(cfg *config.Config, req RunRequest) {
 	}
 	if v := strings.TrimSpace(req.Keywords); v != "" {
 		cfg.Keywords = v
+	}
+	if v := strings.TrimSpace(req.LoginType); v != "" {
+		cfg.LoginType = v
+	}
+	if v := strings.TrimSpace(req.LoginPhone); v != "" {
+		cfg.LoginPhone = v
+	}
+	if v := strings.TrimSpace(req.Cookies); v != "" {
+		cfg.Cookies = v
+	}
+	if req.Headless != nil {
+		cfg.Headless = *req.Headless
+	}
+	if req.StartPage != nil {
+		cfg.StartPage = *req.StartPage
+	}
+	if req.EnableComments != nil {
+		cfg.EnableGetComments = *req.EnableComments
+	}
+	if req.EnableSubComments != nil {
+		cfg.EnableGetSubComments = *req.EnableSubComments
 	}
 	if len(req.XhsSpecifiedNoteUrls) > 0 {
 		cfg.XhsSpecifiedNoteUrls = req.XhsSpecifiedNoteUrls

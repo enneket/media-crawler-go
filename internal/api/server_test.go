@@ -205,3 +205,103 @@ func TestServerLogsEndpoint(t *testing.T) {
 		}
 	}
 }
+
+func TestPythonCompatAPIEndpoints(t *testing.T) {
+	config.AppConfig = config.Config{LogLevel: "info", LogFormat: "json"}
+	logger.InitFromConfig()
+	logger.Info("unit-test-python-compat-logs", "k", "v")
+
+	done := make(chan struct{})
+	runFn := func(ctx context.Context) (crawler.Result, error) {
+		close(done)
+		<-ctx.Done()
+		return crawler.Result{}, nil
+	}
+	srv := NewServer(NewTaskManagerWithRunner(runFn))
+
+	{
+		r := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("api health code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal api health err: %v", err)
+		}
+		if resp["status"] != "ok" {
+			t.Fatalf("unexpected api health resp: %v", resp)
+		}
+	}
+
+	{
+		r := httptest.NewRequest(http.MethodGet, "/api/crawler/logs?limit=2000", nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("api crawler logs code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp struct {
+			Logs []map[string]any `json:"logs"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal api crawler logs err: %v body=%s", err, w.Body.String())
+		}
+		found := false
+		for _, it := range resp.Logs {
+			if it["message"] == "unit-test-python-compat-logs" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("expected python compat log not found, got=%d logs", len(resp.Logs))
+		}
+	}
+
+	{
+		body, _ := json.Marshal(map[string]any{
+			"platform":     "xhs",
+			"crawler_type": "search",
+			"keywords":     "golang",
+		})
+		r := httptest.NewRequest(http.MethodPost, "/api/crawler/start", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("api crawler start code=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("python compat runner did not start")
+	}
+
+	{
+		r := httptest.NewRequest(http.MethodGet, "/api/crawler/status", nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("api crawler status code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal api crawler status err: %v", err)
+		}
+		if resp["status"] != "running" {
+			t.Fatalf("expected status=running, got=%v", resp)
+		}
+	}
+
+	{
+		r := httptest.NewRequest(http.MethodPost, "/api/crawler/stop", nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("api crawler stop code=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+}
