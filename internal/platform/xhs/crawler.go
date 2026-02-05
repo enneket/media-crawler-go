@@ -9,6 +9,7 @@ import (
 	"media-crawler-go/internal/downloader"
 	"media-crawler-go/internal/logger"
 	"media-crawler-go/internal/proxy"
+	"media-crawler-go/internal/sms"
 	"media-crawler-go/internal/store"
 	"os/exec"
 	"strings"
@@ -149,6 +150,9 @@ func (c *XhsCrawler) login(ctx context.Context) error {
 	deadline := time.Now().Add(time.Duration(timeoutSec) * time.Second)
 
 	for time.Now().Before(deadline) {
+		if loginType == "phone" && strings.TrimSpace(config.AppConfig.LoginPhone) != "" {
+			_ = c.tryAutoFillSMSCode("xhs", config.AppConfig.LoginPhone)
+		}
 		if err := c.client.UpdateCookies(c.browser); err == nil && c.client.Pong() {
 			time.Sleep(5 * time.Second)
 			return nil
@@ -242,6 +246,48 @@ func (c *XhsCrawler) tryPrefillPhone(phone string) error {
   el.dispatchEvent(new Event('change', { bubbles: true }));
   return true;
 }`, phone)
+	return err
+}
+
+func (c *XhsCrawler) tryAutoFillSMSCode(platform string, phone string) error {
+	if c.page == nil {
+		return nil
+	}
+	code, ok := sms.Pop(platform, phone)
+	if !ok || strings.TrimSpace(code) == "" {
+		return nil
+	}
+	_, err := c.page.Evaluate(`(code) => {
+  const text = (el) => String((el && (el.innerText || el.textContent)) || '').trim();
+  const inputs = Array.from(document.querySelectorAll('input'));
+  const candidates = [];
+  for (const el of inputs) {
+    const ph = String(el.getAttribute('placeholder') || '');
+    const aria = String(el.getAttribute('aria-label') || '');
+    const name = String(el.getAttribute('name') || '');
+    const id = String(el.getAttribute('id') || '');
+    const label = [ph, aria, name, id].join(' ');
+    if (label.includes('验证码') || label.toLowerCase().includes('code') || label.includes('短信')) {
+      candidates.push(el);
+    }
+  }
+  const el = candidates[0] || inputs[0];
+  if (!el) return false;
+  el.focus();
+  el.value = String(code);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+
+  const buttons = Array.from(document.querySelectorAll('button, a, div[role="button"], span[role="button"]'));
+  for (const b of buttons) {
+    const t = text(b);
+    if (t.includes('登录') || t.includes('确定') || t.includes('下一步') || t.includes('提交')) {
+      try { b.click(); } catch {}
+      break;
+    }
+  }
+  return true;
+}`, code)
 	return err
 }
 

@@ -3,8 +3,13 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"media-crawler-go/internal/browser"
+	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/logger"
 	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -31,10 +36,19 @@ func (s *Server) handleAPIHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAPIEnvCheck(w http.ResponseWriter, r *http.Request) {
+	rep := envReportFromConfig()
+	if rep.OK {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success": true,
+			"message": "MediaCrawler environment configured correctly",
+			"output":  rep.Summary(),
+		})
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"success": true,
-		"message": "Environment check ok",
-		"output":  runtime.Version(),
+		"success": false,
+		"message": "Environment check failed",
+		"error":   rep.Summary(),
 	})
 }
 
@@ -300,3 +314,145 @@ func applyPythonSaveOption(runReq *RunRequest, saveOption string) {
 	}
 }
 
+type envReport struct {
+	Generated      string `json:"generated"`
+	GoVersion      string `json:"go_version"`
+	OS             string `json:"os"`
+	Arch           string `json:"arch"`
+	DataDir        string `json:"data_dir"`
+	DataDirOK      bool   `json:"data_dir_ok"`
+	DataDirError   string `json:"data_dir_error,omitempty"`
+	ChromePath     string `json:"chrome_path,omitempty"`
+	ChromeOK       bool   `json:"chrome_ok"`
+	ChromeError    string `json:"chrome_error,omitempty"`
+	CDPEndpoint    string `json:"cdp_endpoint,omitempty"`
+	CDPReachable   bool   `json:"cdp_reachable"`
+	CDPError       string `json:"cdp_error,omitempty"`
+	Notes          []string
+	OK             bool `json:"ok"`
+}
+
+func envReportFromConfig() envReport {
+	rep := envReport{
+		Generated: time.Now().UTC().Format(time.RFC3339Nano),
+		GoVersion: runtime.Version(),
+		OS:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
+		DataDir:   strings.TrimSpace(configDataDir()),
+	}
+
+	if rep.DataDir == "" {
+		rep.DataDir = "data"
+	}
+	if err := ensureWritableDir(rep.DataDir); err != nil {
+		rep.DataDirOK = false
+		rep.DataDirError = err.Error()
+	} else {
+		rep.DataDirOK = true
+	}
+
+	chrome, err := browserDetect(rep)
+	if err != nil {
+		rep.ChromeOK = false
+		rep.ChromeError = err.Error()
+	} else {
+		rep.ChromeOK = true
+		rep.ChromePath = chrome
+	}
+
+	rep.CDPEndpoint = cdpEndpointFromConfig()
+	if rep.CDPEndpoint != "" {
+		ok, err := httpGetOK(rep.CDPEndpoint+"/json/version", 800*time.Millisecond)
+		if err != nil {
+			rep.CDPReachable = false
+			rep.CDPError = err.Error()
+		} else {
+			rep.CDPReachable = ok
+		}
+	}
+
+	rep.OK = rep.DataDirOK
+	if !rep.ChromeOK {
+		rep.Notes = append(rep.Notes, "Chrome/Chromium not found: set CUSTOM_BROWSER_PATH or CHROME_PATH (needed for CDP mode)")
+	}
+	if rep.CDPEndpoint != "" && !rep.CDPReachable {
+		rep.Notes = append(rep.Notes, "CDP endpoint not reachable: start Chrome with --remote-debugging-port or disable ENABLE_CDP_MODE")
+	}
+	return rep
+}
+
+func (r envReport) Summary() string {
+	parts := []string{
+		fmt.Sprintf("go=%s %s/%s", r.GoVersion, r.OS, r.Arch),
+		fmt.Sprintf("data_dir=%s ok=%v", r.DataDir, r.DataDirOK),
+	}
+	if r.ChromePath != "" {
+		parts = append(parts, fmt.Sprintf("chrome=%s ok=%v", r.ChromePath, r.ChromeOK))
+	} else {
+		parts = append(parts, fmt.Sprintf("chrome ok=%v", r.ChromeOK))
+	}
+	if r.CDPEndpoint != "" {
+		parts = append(parts, fmt.Sprintf("cdp=%s ok=%v", r.CDPEndpoint, r.CDPReachable))
+	}
+	if len(r.Notes) > 0 {
+		parts = append(parts, "notes="+strings.Join(r.Notes, "; "))
+	}
+	if r.DataDirError != "" {
+		parts = append(parts, "data_dir_error="+r.DataDirError)
+	}
+	if r.ChromeError != "" {
+		parts = append(parts, "chrome_error="+r.ChromeError)
+	}
+	if r.CDPError != "" {
+		parts = append(parts, "cdp_error="+r.CDPError)
+	}
+	return strings.Join(parts, "\n")
+}
+
+func ensureWritableDir(dir string) error {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(abs, 0755); err != nil {
+		return err
+	}
+	fp := filepath.Join(abs, ".write_test")
+	if err := os.WriteFile(fp, []byte("ok"), 0644); err != nil {
+		return err
+	}
+	_ = os.Remove(fp)
+	return nil
+}
+
+func configDataDir() string {
+	return strings.TrimSpace(config.AppConfig.DataDir)
+}
+
+func cdpEndpointFromConfig() string {
+	if !config.AppConfig.EnableCDPMode || config.AppConfig.CDPDebugPort <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("http://127.0.0.1:%d", config.AppConfig.CDPDebugPort)
+}
+
+func httpGetOK(url string, timeout time.Duration) (bool, error) {
+	client := &http.Client{Timeout: timeout}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return false, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+	_ = resp.Body.Close()
+	return resp.StatusCode == http.StatusOK, nil
+}
+
+func browserDetect(rep envReport) (string, error) {
+	if rep.OS == "" {
+		return "", fmt.Errorf("unknown runtime OS")
+	}
+	return browser.DetectBinary(config.AppConfig.CustomBrowserPath)
+}

@@ -7,6 +7,7 @@ import (
 	"media-crawler-go/internal/config"
 	"media-crawler-go/internal/crawler"
 	"media-crawler-go/internal/logger"
+	"media-crawler-go/internal/sms"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -303,5 +304,72 @@ func TestPythonCompatAPIEndpoints(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("api crawler stop code=%d body=%s", w.Code, w.Body.String())
 		}
+	}
+}
+
+func TestEnvCheckEndpoints(t *testing.T) {
+	config.AppConfig = config.Config{}
+	srv := NewServer(NewTaskManagerWithRunner(func(ctx context.Context) (crawler.Result, error) {
+		return crawler.Result{}, nil
+	}))
+
+	{
+		r := httptest.NewRequest(http.MethodGet, "/env/check", nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("env check code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal env check err: %v body=%s", err, w.Body.String())
+		}
+		if _, ok := resp["data_dir"]; !ok {
+			t.Fatalf("env check missing data_dir: %v", resp)
+		}
+		if _, ok := resp["data_dir_ok"]; !ok {
+			t.Fatalf("env check missing data_dir_ok: %v", resp)
+		}
+	}
+
+	{
+		r := httptest.NewRequest(http.MethodGet, "/api/env/check", nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("api env check code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal api env check err: %v body=%s", err, w.Body.String())
+		}
+		if resp["success"] != true {
+			t.Fatalf("expected success=true, got: %v", resp)
+		}
+	}
+}
+
+func TestSMSEndpointStoresCode(t *testing.T) {
+	config.AppConfig = config.Config{CacheBackend: "memory"}
+	srv := NewServer(NewTaskManagerWithRunner(func(ctx context.Context) (crawler.Result, error) {
+		return crawler.Result{}, nil
+	}))
+
+	body, _ := json.Marshal(map[string]any{
+		"platform":        "xhs",
+		"current_number":  "13152442222",
+		"sms_content":     "【小红书】您的验证码是: 171959， 3分钟内有效。",
+		"timestamp":       "0",
+	})
+	r := httptest.NewRequest(http.MethodPost, "/api/sms", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("sms code=%d body=%s", w.Code, w.Body.String())
+	}
+
+	code, ok := sms.Pop("xhs", "13152442222")
+	if !ok || code != "171959" {
+		t.Fatalf("expected code 171959, got ok=%v code=%q", ok, code)
 	}
 }

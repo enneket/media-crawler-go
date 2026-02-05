@@ -39,6 +39,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /status", s.handleStatus)
 	s.mux.HandleFunc("POST /run", s.handleRun)
 	s.mux.HandleFunc("POST /stop", s.handleStop)
+	s.mux.HandleFunc("POST /sms", s.handleSMS)
+	s.mux.HandleFunc("POST /api/sms", s.handleSMS)
 	s.mux.HandleFunc("GET /logs", s.handleLogs)
 	s.mux.HandleFunc("GET /crawler/logs", s.handleLogs)
 	s.mux.HandleFunc("GET /api/logs", s.handleLogs)

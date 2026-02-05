@@ -3,8 +3,6 @@ package api
 import (
 	"media-crawler-go/internal/config"
 	"net/http"
-	"runtime"
-	"time"
 )
 
 type platformInfo struct {
@@ -84,10 +82,6 @@ func (s *Server) handleConfigOptions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleEnvCheck(w http.ResponseWriter, r *http.Request) {
-	now := time.Now().UTC()
-	writeJSON(w, http.StatusOK, map[string]any{
-		"ok":         true,
-		"generated":  now.Format(time.RFC3339Nano),
-		"go_version": runtime.Version(),
-	})
+	rep := envReportFromConfig()
+	writeJSON(w, http.StatusOK, rep)
 }

@@ -67,3 +67,7 @@ func detectBrowserBinary(customPath string) (string, error) {
 
 	return "", fmt.Errorf("no chrome/chromium binary found; set CUSTOM_BROWSER_PATH or CHROME_PATH")
 }
+
+func DetectBinary(customPath string) (string, error) {
+	return detectBrowserBinary(customPath)
+}
