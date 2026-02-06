@@ -156,11 +156,11 @@
 - [x] T-504 Stealth 强度增强（best-effort）：支持配置完整 stealth.min.js 注入与路径解析增强。
 - [x] T-505 Excel 导出体验对齐：单文件多 Sheet + 样式优化（best-effort）。
 - [x] T-506 存储语义对齐（best-effort）：补充 README 与 /config/options 说明，明确 STORE_BACKEND（是否写 DB）与 SAVE_DATA_OPTION（文件格式）职责边界，并增加 xlsx_book/excel 的解释。
-- [ ] （可选）T-601 Python API 兼容路由：增加 `/crawler/start|stop|status` 并兼容字段映射。
-- [ ] （可选）T-602 Phone 登录自动化：增加 SMS Webhook + Redis 验证码缓存，xhs/douyin 自动回填验证码。
+- [x] T-601 Python API 兼容路由：增加 `/crawler/start|stop|status` 并兼容字段映射。
+- [x] T-602 Phone 登录自动化：增加 SMS Webhook + Redis 验证码缓存，xhs/douyin 自动回填验证码。
 - [ ] （可选）T-603 SaveDataOption 兼容：接受 python `save_option=db/sqlite/postgres/mongodb` 并映射 `STORE_BACKEND`。
 - [ ] （可选）T-604 B 站高级配置对齐：补齐 `BILI_QN`、`START_DAY/END_DAY` 与扩展抓取项（如仍需要）。
-- [ ] （可选）T-605 Python API 前缀兼容：增加 `/api/*` 路由别名与 WS 别名，保持现有接口不变。
+- [x] T-605 Python API 前缀兼容：增加 `/api/*` 路由别名与 WS 别名，保持现有接口不变。
 - [ ] （可选）T-606 结构化 DB schema 评估：确定是否要对齐 Python 的多表列式设计，并给出方案。
-- [ ] （可选）T-607 EnvCheck 对齐：实现依赖探测版 `/api/env/check`（Playwright/浏览器/CDP 端口/权限等）。
+- [x] T-607 EnvCheck 对齐：实现依赖探测版 `/api/env/check`（Playwright/浏览器/CDP 端口/权限等）。
 - [ ] （可选）T-608 Excel 扩展：B 站 Contacts/Dynamics 导出与落盘（如仍需要）。

@@ -307,6 +307,68 @@ func TestPythonCompatAPIEndpoints(t *testing.T) {
 	}
 }
 
+func TestCrawlerAliasRoutes(t *testing.T) {
+	// Test the new alias routes: /crawler/start|stop|status
+	config.AppConfig = config.Config{LogLevel: "info", LogFormat: "json"}
+	logger.InitFromConfig()
+
+	done := make(chan struct{})
+	runFn := func(ctx context.Context) (crawler.Result, error) {
+		close(done)
+		<-ctx.Done()
+		return crawler.Result{}, nil
+	}
+	srv := NewServer(NewTaskManagerWithRunner(runFn))
+
+	// /crawler/start
+	{
+		body, _ := json.Marshal(map[string]any{
+			"platform":     "xhs",
+			"crawler_type": "search",
+			"keywords":     "alias-test",
+		})
+		r := httptest.NewRequest(http.MethodPost, "/crawler/start", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("crawler start alias code=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("crawler start alias runner did not start")
+	}
+
+	// /crawler/status
+	{
+		r := httptest.NewRequest(http.MethodGet, "/crawler/status", nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("crawler status alias code=%d body=%s", w.Code, w.Body.String())
+		}
+		var resp map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("unmarshal crawler status alias err: %v", err)
+		}
+		if resp["status"] != "running" {
+			t.Fatalf("expected status=running, got=%v", resp)
+		}
+	}
+
+	// /crawler/stop
+	{
+		r := httptest.NewRequest(http.MethodPost, "/crawler/stop", nil)
+		w := httptest.NewRecorder()
+		srv.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("crawler stop alias code=%d body=%s", w.Code, w.Body.String())
+		}
+	}
+}
+
 func TestEnvCheckEndpoints(t *testing.T) {
 	config.AppConfig = config.Config{}
 	srv := NewServer(NewTaskManagerWithRunner(func(ctx context.Context) (crawler.Result, error) {
@@ -356,10 +418,10 @@ func TestSMSEndpointStoresCode(t *testing.T) {
 	}))
 
 	body, _ := json.Marshal(map[string]any{
-		"platform":        "xhs",
-		"current_number":  "13152442222",
-		"sms_content":     "【小红书】您的验证码是: 171959， 3分钟内有效。",
-		"timestamp":       "0",
+		"platform":       "xhs",
+		"current_number": "13152442222",
+		"sms_content":    "【小红书】您的验证码是: 171959， 3分钟内有效。",
+		"timestamp":      "0",
 	})
 	r := httptest.NewRequest(http.MethodPost, "/api/sms", bytes.NewReader(body))
 	w := httptest.NewRecorder()
