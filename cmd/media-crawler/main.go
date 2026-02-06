@@ -164,6 +164,22 @@ func applyOverrides(cfg *config.Config, o overrides) {
 	}
 	if v := strings.TrimSpace(o.saveData); v != "" {
 		cfg.SaveDataOption = v
+		// Compat: map save_option=db/sqlite/postgres/mongodb to StoreBackend
+		lower := strings.ToLower(v)
+		switch lower {
+		case "sqlite":
+			cfg.StoreBackend = "sqlite"
+			cfg.SaveDataOption = "json" // default file format
+		case "db", "mysql":
+			cfg.StoreBackend = "mysql"
+			cfg.SaveDataOption = "json"
+		case "postgres", "postgresql":
+			cfg.StoreBackend = "postgres"
+			cfg.SaveDataOption = "json"
+		case "mongodb":
+			cfg.StoreBackend = "mongodb"
+			cfg.SaveDataOption = "json"
+		}
 	}
 	if v := strings.TrimSpace(o.sqlitePath); v != "" {
 		cfg.SQLitePath = v

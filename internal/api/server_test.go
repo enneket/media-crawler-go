@@ -435,3 +435,40 @@ func TestSMSEndpointStoresCode(t *testing.T) {
 		t.Fatalf("expected code 171959, got ok=%v code=%q", ok, code)
 	}
 }
+
+func TestSaveDataOptionCompat(t *testing.T) {
+	// Test save_option mapping to store_backend
+	config.AppConfig = config.Config{LogLevel: "info", LogFormat: "json"}
+	logger.InitFromConfig()
+
+	// We can test the `applyPythonSaveOption` logic if we export it or put it in a separate testable file.
+	// But it is private in `server.go` (or `python_compat.go`).
+
+	// Let's rely on the fact that we can't easily test private methods from external test package unless we are in same package.
+	// We are in `package api`, so we CAN access private methods of Server or helper functions in same package.
+	// `applyPythonSaveOption` is in `python_compat.go` and is package-private.
+
+	tests := []struct {
+		inputOption  string
+		wantBackend  string
+		wantSaveOpt  string
+	}{
+		{"json", "file", "json"},
+		{"csv", "file", "csv"},
+		{"sqlite", "sqlite", "json"},
+		{"mongodb", "mongodb", "json"},
+		{"mysql", "mysql", "json"},
+		{"postgres", "postgres", "json"},
+	}
+
+	for _, tt := range tests {
+		req := RunRequest{}
+		applyPythonSaveOption(&req, tt.inputOption)
+		if req.StoreBackend != tt.wantBackend {
+			t.Errorf("input=%s wantBackend=%s got=%s", tt.inputOption, tt.wantBackend, req.StoreBackend)
+		}
+		if req.SaveDataOption != tt.wantSaveOpt {
+			t.Errorf("input=%s wantSaveOpt=%s got=%s", tt.inputOption, tt.wantSaveOpt, req.SaveDataOption)
+		}
+	}
+}
