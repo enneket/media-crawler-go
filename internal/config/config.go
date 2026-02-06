@@ -76,6 +76,10 @@ type Config struct {
 	BiliSpecifiedVideoUrls []string `mapstructure:"BILI_SPECIFIED_VIDEO_URL_LIST"`
 	BiliCreatorIdList      []string `mapstructure:"BILI_CREATOR_ID_LIST"`
 	BiliSearchMode         string   `mapstructure:"BILI_SEARCH_MODE"`
+	BiliQn                 int      `mapstructure:"BILI_QN"`
+	BiliDateRangeStart     string   `mapstructure:"BILI_DATE_RANGE_START"`
+	BiliDateRangeEnd       string   `mapstructure:"BILI_DATE_RANGE_END"`
+	BiliMaxNotesPerDay     int      `mapstructure:"BILI_MAX_NOTES_PER_DAY"`
 
 	// Weibo Specific
 	WBSpecifiedNoteUrls []string `mapstructure:"WB_SPECIFIED_NOTE_URL_LIST"`
@@ -159,6 +163,10 @@ func LoadConfig(path string) error {
 	viper.SetDefault("SORT_TYPE", "popularity_descending")
 	viper.SetDefault("BILI_CREATOR_ID_LIST", []string{})
 	viper.SetDefault("BILI_SEARCH_MODE", "video")
+	viper.SetDefault("BILI_QN", 80)
+	viper.SetDefault("BILI_DATE_RANGE_START", "")
+	viper.SetDefault("BILI_DATE_RANGE_END", "")
+	viper.SetDefault("BILI_MAX_NOTES_PER_DAY", 0)
 	viper.SetDefault("TIEBA_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("TIEBA_CREATOR_URL_LIST", []string{})
 	viper.SetDefault("ZHIHU_SPECIFIED_NOTE_URL_LIST", []string{})

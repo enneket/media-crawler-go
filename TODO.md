@@ -159,7 +159,7 @@
 - [x] T-601 Python API 兼容路由：增加 `/crawler/start|stop|status` 并兼容字段映射。
 - [x] T-602 Phone 登录自动化：增加 SMS Webhook + Redis 验证码缓存，xhs/douyin 自动回填验证码。
 - [x] T-603 SaveDataOption 兼容：接受 python `save_option=db/sqlite/postgres/mongodb` 并映射 `STORE_BACKEND`。
-- [ ] （可选）T-604 B 站高级配置对齐：补齐 `BILI_QN`、`START_DAY/END_DAY` 与扩展抓取项（如仍需要）。
+- [x] T-604 B 站高级配置对齐：补齐 `BILI_QN`、`START_DAY/END_DAY` 与扩展抓取项（如仍需要）。
 - [x] T-605 Python API 前缀兼容：增加 `/api/*` 路由别名与 WS 别名，保持现有接口不变。
 - [ ] （可选）T-606 结构化 DB schema 评估：确定是否要对齐 Python 的多表列式设计，并给出方案。
 - [x] T-607 EnvCheck 对齐：实现依赖探测版 `/api/env/check`（Playwright/浏览器/CDP 端口/权限等）。

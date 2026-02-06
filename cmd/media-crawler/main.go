@@ -88,6 +88,10 @@ type overrides struct {
 	getMedias     optionalBool
 	getWordcloud  optionalBool
 	pythonCompat  optionalBool
+	biliQn                 int
+	biliDateRangeStart     string
+	biliDateRangeEnd       string
+	biliMaxNotesPerDay     int
 }
 
 func splitCSV(s string) []string {
@@ -224,6 +228,19 @@ func applyOverrides(cfg *config.Config, o overrides) {
 		cfg.MaxConcurrencyNum = o.concurrency
 	}
 
+	if o.biliQn > 0 {
+		cfg.BiliQn = o.biliQn
+	}
+	if v := strings.TrimSpace(o.biliDateRangeStart); v != "" {
+		cfg.BiliDateRangeStart = v
+	}
+	if v := strings.TrimSpace(o.biliDateRangeEnd); v != "" {
+		cfg.BiliDateRangeEnd = v
+	}
+	if o.biliMaxNotesPerDay > 0 {
+		cfg.BiliMaxNotesPerDay = o.biliMaxNotesPerDay
+	}
+
 	in := strings.TrimSpace(o.inputs)
 	if in == "" {
 		mode := strings.ToLower(strings.TrimSpace(cfg.CrawlerType))
@@ -321,6 +338,10 @@ func registerRunFlags(fs *flag.FlagSet, o *overrides) {
 	fs.StringVar(&o.proxyProvider, "ip_proxy_provider_name", "", "ip proxy provider name")
 	fs.StringVar(&o.proxyList, "ip_proxy_list", "", "static proxy list csv")
 	fs.StringVar(&o.proxyFile, "ip_proxy_file", "", "static proxy file path")
+	fs.IntVar(&o.biliQn, "bili_qn", 0, "bilibili video quality (0/80/...)")
+	fs.StringVar(&o.biliDateRangeStart, "start_day", "", "bilibili date range start (YYYY-MM-DD)")
+	fs.StringVar(&o.biliDateRangeEnd, "end_day", "", "bilibili date range end (YYYY-MM-DD)")
+	fs.IntVar(&o.biliMaxNotesPerDay, "max_notes_per_day", 0, "bilibili max notes per day")
 }
 
 func registerStoreFlags(fs *flag.FlagSet, o *overrides) {

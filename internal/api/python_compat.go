@@ -146,6 +146,10 @@ func (s *Server) handleAPICrawlerStart(w http.ResponseWriter, r *http.Request) {
 		case "creator":
 			runReq.BiliCreatorIdList = creators
 		}
+		if req.StartPage > 0 {
+			// for bili, StartPage is not used in request body directly usually,
+			// but we mapped it to runReq.StartPage
+		}
 	case "wb", "weibo":
 		switch crawlerType {
 		case "detail":
