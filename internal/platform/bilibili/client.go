@@ -133,6 +133,41 @@ func (c *Client) GetView(ctx context.Context, bvid string, aid int64) (ViewRespo
 	return out, nil
 }
 
+type SpaceDynamicsResponse struct {
+	Code    int             `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func (c *Client) GetSpaceDynamics(ctx context.Context, hostMid string, offset string) (SpaceDynamicsResponse, error) {
+	if err := c.ensureProxy(ctx); err != nil {
+		return SpaceDynamicsResponse{}, err
+	}
+	hostMid = strings.TrimSpace(hostMid)
+	if hostMid == "" {
+		return SpaceDynamicsResponse{}, fmt.Errorf("empty hostMid")
+	}
+	var out SpaceDynamicsResponse
+	req := c.httpClient.R().
+		SetContext(ctx).
+		SetQueryParam("host_mid", hostMid).
+		SetResult(&out)
+	if offset != "" {
+		req.SetQueryParam("offset", offset)
+	}
+	resp, err := req.Get("/x/polymer/web-dynamic/v1/feed/space")
+	if err != nil {
+		return SpaceDynamicsResponse{}, err
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return SpaceDynamicsResponse{}, crawler.NewHTTPStatusError("bilibili", "/x/polymer/web-dynamic/v1/feed/space", resp.StatusCode(), resp.String())
+	}
+	if out.Code != 0 {
+		return SpaceDynamicsResponse{}, fmt.Errorf("bilibili api error: code=%d message=%s", out.Code, out.Message)
+	}
+	return out, nil
+}
+
 type SearchResponse struct {
 	Code    int             `json:"code"`
 	Message string          `json:"message"`

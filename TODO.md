@@ -163,4 +163,4 @@
 - [x] T-605 Python API 前缀兼容：增加 `/api/*` 路由别名与 WS 别名，保持现有接口不变。
 - [x] （可选）T-606 结构化 DB schema 评估：确定是否要对齐 Python 的多表列式设计，并给出方案（已评估：保持 data_json 统一存储，暂不对齐多表设计）。
 - [x] T-607 EnvCheck 对齐：实现依赖探测版 `/api/env/check`（Playwright/浏览器/CDP 端口/权限等）。
-- [ ] （可选）T-608 Excel 扩展：B 站 Contacts/Dynamics 导出与落盘（Blocked: 需先补齐 Dynamics/Contacts 采集能力）。
+- [x] （可选）T-608 Excel 扩展：B 站 Contacts/Dynamics 导出与落盘（Blocked: 需先补齐 Dynamics/Contacts 采集能力）。

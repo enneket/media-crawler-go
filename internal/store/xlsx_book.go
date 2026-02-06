@@ -122,7 +122,18 @@ func AppendUniqueBookSheetRows(sheet string, indexFilename string, items []any, 
 	defer bookMu.Unlock()
 
 	path := workbookPath()
-	f, err := openOrCreateBook(path, []string{"Contents", "Comments", "Creators"})
+	sheets := []string{"Contents", "Comments", "Creators"}
+	found := false
+	for _, s := range sheets {
+		if s == sheet {
+			found = true
+			break
+		}
+	}
+	if !found {
+		sheets = append(sheets, sheet)
+	}
+	f, err := openOrCreateBook(path, sheets)
 	if err != nil {
 		return 0, err
 	}
@@ -175,7 +186,18 @@ func appendUniqueBookRow(sheet string, indexFilename string, key string, header 
 	defer bookMu.Unlock()
 
 	path := workbookPath()
-	f, err := openOrCreateBook(path, []string{"Contents", "Comments", "Creators"})
+	sheets := []string{"Contents", "Comments", "Creators"}
+	found := false
+	for _, s := range sheets {
+		if s == sheet {
+			found = true
+			break
+		}
+	}
+	if !found {
+		sheets = append(sheets, sheet)
+	}
+	f, err := openOrCreateBook(path, sheets)
 	if err != nil {
 		return err
 	}

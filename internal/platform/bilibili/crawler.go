@@ -20,6 +20,7 @@ type apiClient interface {
 	SearchVideo(context.Context, string, int, string) (SearchResponse, error)
 	GetUpInfo(context.Context, string) (UpInfoResponse, error)
 	ListUpVideos(context.Context, string, int, int) (UpVideosResponse, error)
+	GetSpaceDynamics(context.Context, string, string) (SpaceDynamicsResponse, error)
 }
 
 type Crawler struct {
@@ -462,6 +463,12 @@ func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.
 			return out, err
 		}
 
+		if config.AppConfig.BiliEnableGetDynamics {
+			if err := c.crawlDynamics(ctx, mid); err != nil {
+				logger.Error("crawl dynamics failed", "mid", mid, "err", err)
+			}
+		}
+
 		page := 1
 		pageSize := 30
 		seen := map[string]struct{}{}
@@ -501,6 +508,76 @@ func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.
 	}
 	out.FinishedAt = time.Now().Unix()
 	return out, nil
+}
+
+func (c *Crawler) crawlDynamics(ctx context.Context, mid string) error {
+	logger.Info("start crawling dynamics", "mid", mid)
+	offset := ""
+	limit := config.AppConfig.CrawlerMaxNotesCount
+	if limit <= 0 {
+		limit = 50
+	}
+	count := 0
+
+	for {
+		res, err := c.client.GetSpaceDynamics(ctx, mid, offset)
+		if err != nil {
+			logger.Error("get dynamics failed", "mid", mid, "err", err)
+			return err
+		}
+		var data map[string]any
+		if err := json.Unmarshal(res.Data, &data); err != nil {
+			return err
+		}
+		items, nextOffset := extractDynamics(data)
+		if len(items) == 0 {
+			break
+		}
+
+		if err := c.saveDynamics(mid, items); err != nil {
+			logger.Error("save dynamics failed", "mid", mid, "err", err)
+		}
+
+		count += len(items)
+		if count >= limit || nextOffset == "" || (offset == nextOffset) {
+			break
+		}
+		offset = nextOffset
+
+		sleepSec := config.AppConfig.CrawlerMaxSleepSec
+		if sleepSec > 0 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(time.Duration(sleepSec) * time.Second):
+			}
+		}
+	}
+	logger.Info("finished crawling dynamics", "mid", mid, "count", count)
+	return nil
+}
+
+func (c *Crawler) saveDynamics(mid string, items []*Dynamic) error {
+	anyItems := make([]any, len(items))
+	for i, v := range items {
+		anyItems[i] = v
+	}
+
+	if config.AppConfig.SaveDataOption == "xlsx_book" || config.AppConfig.SaveDataOption == "excel" {
+		_, err := store.AppendUniqueBookSheetRows(
+			"Dynamics",
+			"dynamics.book.idx",
+			anyItems,
+			func(i any) (string, error) { return i.(*Dynamic).ID, nil },
+			(&Dynamic{}).CSVHeader(),
+			func(i any) ([]string, error) { return i.(*Dynamic).ToCSV(), nil },
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return store.SaveCreatorDynamics(mid, anyItems)
 }
 
 type videoRef struct {

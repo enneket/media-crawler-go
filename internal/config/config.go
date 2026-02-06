@@ -80,6 +80,7 @@ type Config struct {
 	BiliDateRangeStart     string   `mapstructure:"BILI_DATE_RANGE_START"`
 	BiliDateRangeEnd       string   `mapstructure:"BILI_DATE_RANGE_END"`
 	BiliMaxNotesPerDay     int      `mapstructure:"BILI_MAX_NOTES_PER_DAY"`
+	BiliEnableGetDynamics  bool     `mapstructure:"BILI_ENABLE_GET_DYNAMICS"`
 
 	// Weibo Specific
 	WBSpecifiedNoteUrls []string `mapstructure:"WB_SPECIFIED_NOTE_URL_LIST"`
@@ -167,6 +168,7 @@ func LoadConfig(path string) error {
 	viper.SetDefault("BILI_DATE_RANGE_START", "")
 	viper.SetDefault("BILI_DATE_RANGE_END", "")
 	viper.SetDefault("BILI_MAX_NOTES_PER_DAY", 0)
+	viper.SetDefault("BILI_ENABLE_GET_DYNAMICS", false)
 	viper.SetDefault("TIEBA_SPECIFIED_NOTE_URL_LIST", []string{})
 	viper.SetDefault("TIEBA_CREATOR_URL_LIST", []string{})
 	viper.SetDefault("ZHIHU_SPECIFIED_NOTE_URL_LIST", []string{})
