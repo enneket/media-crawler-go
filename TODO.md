@@ -56,10 +56,10 @@
 - [x] 补齐评论抓取的平台覆盖：zhihu / kuaishou（已补齐；支持全量翻页 best-effort：优先 API 翻页，失败回退 HTML 初始数据解析）。
 
 ### API 兼容层（可选）
-- [ ] （可选）增加 Python 版 API 兼容路由：`/crawler/start`、`/crawler/stop`、`/crawler/status`（保留现有 `/run`、`/stop`、`/status`）。
-- [ ] （可选）兼容 Python 版请求字段命名：`login_type/save_option/specified_ids/creator_ids/enable_comments/...` 映射到 Go 的 RunRequest/Config。
-- [ ] （可选）增加 Python 版 `/api` 前缀兼容：`/api/health`、`/api/env/check`、`/api/config/*`、`/api/data/*`、`/api/logs`、`/api/ws/*`（保持现有无前缀路由不变）。
-- [ ] （可选）对齐 Python `/api/env/check` 语义：执行依赖/环境探测（Playwright/浏览器/权限）并返回可读错误，而不仅是版本信息。
+- [x] （可选）增加 Python 版 API 兼容路由：`/crawler/start`、`/crawler/stop`、`/crawler/status`（保留现有 `/run`、`/stop`、`/status`）。
+- [x] （可选）兼容 Python 版请求字段命名：`login_type/save_option/specified_ids/creator_ids/enable_comments/...` 映射到 Go 的 RunRequest/Config。
+- [x] （可选）增加 Python 版 `/api` 前缀兼容：`/api/health`、`/api/env/check`、`/api/config/*`、`/api/data/*`、`/api/logs`、`/api/ws/*`（保持现有无前缀路由不变）。
+- [x] （可选）对齐 Python `/api/env/check` 语义：执行依赖/环境探测（Playwright/浏览器/权限）并返回可读错误，而不仅是版本信息。
 
 ### 媒体下载覆盖
 - [x] 补齐媒体下载的平台覆盖：weibo / bilibili（已补齐；当前为 best-effort，bilibili 视频下载依赖 /x/player/playurl 可用性）。
@@ -69,7 +69,7 @@
 - [x] 对齐（或明确文档差异）JSON 输出语义与目录结构：新增 `PYTHON_COMPAT_OUTPUT=true` 时输出“数组写回 + data/{platform}/json/...”，默认仍保留 Go 的 per-note/jsonl 结构。
 
 ### SaveDataOption 兼容（可选）
-- [ ] （可选）CLI/API 兼容 Python `save_option=db/sqlite/postgres/mongodb`：自动映射到 `STORE_BACKEND`（并保持 `SAVE_DATA_OPTION` 仅表示文件格式）。
+- [x] （可选）CLI/API 兼容 Python `save_option=db/sqlite/postgres/mongodb`：自动映射到 `STORE_BACKEND`（并保持 `SAVE_DATA_OPTION` 仅表示文件格式）。
 
 ### 词云触发方式
 - [x] 任务结束自动生成词云：新增 `ENABLE_GET_WORDCLOUD=true` 时任务结束自动生成（同时保留 /data/wordcloud 手动触发）。
@@ -78,7 +78,7 @@
 - [x] 细化“各平台支持的登录形态”说明：README 已补充各平台支持范围（xhs/douyin 支持 qrcode/phone/cookie，其它平台一般为 cookie）。
 
 ### Phone 登录自动化（验证码回填）
-- [ ] （可选）对齐 Python 的短信转发登录链路：提供 SMS Webhook（接收短信内容提取验证码）+ Redis 缓存，并在 xhs/douyin `LOGIN_TYPE=phone` 时自动回填验证码。
+- [x] （可选）对齐 Python 的短信转发登录链路：提供 SMS Webhook（接收短信内容提取验证码）+ Redis 缓存，并在 xhs/douyin `LOGIN_TYPE=phone` 时自动回填验证码。
 
 ### 代理能力对齐
 - [x] 代理供应商对齐：补齐 Python 版的 `jishu_http` provider（支持 jisuhttp/jishuhttp/jishu_http）。
@@ -101,13 +101,13 @@
 - [x] 词云质量对齐（best-effort）：支持 STOP_WORDS_FILE/CUSTOM_WORDS/FONT_PATH，保存 PNG 与词频 JSON；分词为“汉字段 + 停用词切分 + 自定义词匹配”的简化实现。
 
 ### B 站高级配置（需确认是否要完全对齐）
-- [ ] （可选）对齐 Python bilibili 高级项：`BILI_QN`（清晰度）、`START_DAY/END_DAY`（时间范围过滤）、`MAX_NOTES_PER_DAY`（按日上限）、动态/联系人等扩展抓取项（如仍需要）。
+- [x] （可选）对齐 Python bilibili 高级项：`BILI_QN`（清晰度）、`START_DAY/END_DAY`（时间范围过滤）、`MAX_NOTES_PER_DAY`（按日上限）、动态/联系人等扩展抓取项（如仍需要）。
 
 ### 数据库结构化程度（可选差异）
-- [ ] （可选）对齐 Python 的“按平台多表 + 列级字段”的关系型 schema（或明确不对齐）：Go 版当前为统一表 + data_json，便于归档但不利于复杂 SQL 分析。
+- [x] （可选）对齐 Python 的“按平台多表 + 列级字段”的关系型 schema（或明确不对齐）：Go 版当前为统一表 + data_json，便于归档但不利于复杂 SQL 分析（已评估：保持现状）。
 
 ### Excel 导出（可选）
-- [ ] （可选）对齐 Python Excel 额外 Sheet：B 站支持导出 Contacts/Dynamics（如仍需要，且 Go 侧已采集到对应数据）。
+- [-] （可选）对齐 Python Excel 额外 Sheet：B 站支持导出 Contacts/Dynamics（Blocked: 需先补齐采集能力）。
 
 ## 体验差异（待增强，不影响主功能）
 
@@ -161,6 +161,6 @@
 - [x] T-603 SaveDataOption 兼容：接受 python `save_option=db/sqlite/postgres/mongodb` 并映射 `STORE_BACKEND`。
 - [x] T-604 B 站高级配置对齐：补齐 `BILI_QN`、`START_DAY/END_DAY` 与扩展抓取项（如仍需要）。
 - [x] T-605 Python API 前缀兼容：增加 `/api/*` 路由别名与 WS 别名，保持现有接口不变。
-- [ ] （可选）T-606 结构化 DB schema 评估：确定是否要对齐 Python 的多表列式设计，并给出方案。
+- [x] （可选）T-606 结构化 DB schema 评估：确定是否要对齐 Python 的多表列式设计，并给出方案（已评估：保持 data_json 统一存储，暂不对齐多表设计）。
 - [x] T-607 EnvCheck 对齐：实现依赖探测版 `/api/env/check`（Playwright/浏览器/CDP 端口/权限等）。
-- [ ] （可选）T-608 Excel 扩展：B 站 Contacts/Dynamics 导出与落盘（如仍需要）。
+- [ ] （可选）T-608 Excel 扩展：B 站 Contacts/Dynamics 导出与落盘（Blocked: 需先补齐 Dynamics/Contacts 采集能力）。

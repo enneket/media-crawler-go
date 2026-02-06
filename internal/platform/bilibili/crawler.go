@@ -305,7 +305,11 @@ func (c *Crawler) downloadMedias(ctx context.Context, bvid string, aid int64, no
 	}
 	cid := ExtractCIDFromViewData(viewData)
 	if mc, ok := c.client.(mediaClient); ok && aid2 > 0 && cid > 0 {
-		play, err := mc.GetPlayURL(ctx, aid2, cid, 80)
+		qn := config.AppConfig.BiliQn
+		if qn <= 0 {
+			qn = 80
+		}
+		play, err := mc.GetPlayURL(ctx, aid2, cid, qn)
 		if err == nil {
 			purls, pnames := ExtractBilibiliPlayURLs(noteID, play.Data)
 			urls = append(urls, purls...)
@@ -353,6 +357,20 @@ func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.R
 		searchType = "video"
 	}
 
+	var minTime, maxTime int64
+	if s := config.AppConfig.BiliDateRangeStart; s != "" {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			minTime = t.Unix()
+		}
+	}
+	if s := config.AppConfig.BiliDateRangeEnd; s != "" {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			maxTime = t.Unix() + 86400
+		}
+	}
+	maxPerDay := config.AppConfig.BiliMaxNotesPerDay
+	dayCounts := map[string]int{}
+
 	out := crawler.NewResult(req)
 	seen := map[string]struct{}{}
 	for _, kw := range keywords {
@@ -367,6 +385,8 @@ func (c *Crawler) runSearch(ctx context.Context, req crawler.Request) (crawler.R
 				return out, err
 			}
 			videos := extractSearchVideos(data)
+			videos = filterByDate(videos, minTime, maxTime)
+			videos = filterByDailyLimit(videos, maxPerDay, dayCounts)
 			videos = filterNewVideos(videos, seen, maxNotes-(out.Succeeded+out.Failed))
 			if len(videos) == 0 {
 				break
@@ -410,6 +430,20 @@ func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.
 		limit = 1
 	}
 
+	var minTime, maxTime int64
+	if s := config.AppConfig.BiliDateRangeStart; s != "" {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			minTime = t.Unix()
+		}
+	}
+	if s := config.AppConfig.BiliDateRangeEnd; s != "" {
+		if t, err := time.Parse("2006-01-02", s); err == nil {
+			maxTime = t.Unix() + 86400
+		}
+	}
+	maxPerDay := config.AppConfig.BiliMaxNotesPerDay
+	dayCounts := map[string]int{}
+
 	out := crawler.NewResult(req)
 	for _, in := range inputs {
 		mid, err := ParseCreatorID(in)
@@ -441,6 +475,8 @@ func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.
 				return out, err
 			}
 			videos := extractUpVideos(data)
+			videos = filterByDate(videos, minTime, maxTime)
+			videos = filterByDailyLimit(videos, maxPerDay, dayCounts)
 			videos = filterNewVideos(videos, seen, maxNotes-(out.Succeeded+out.Failed))
 			if len(videos) == 0 {
 				break
@@ -468,9 +504,10 @@ func (c *Crawler) runCreator(ctx context.Context, req crawler.Request) (crawler.
 }
 
 type videoRef struct {
-	BVID   string
-	AID    int64
-	NoteID string
+	BVID    string
+	AID     int64
+	NoteID  string
+	PubTime int64
 }
 
 func trimStrings(in []string) []string {
@@ -534,7 +571,8 @@ func extractSearchVideos(data map[string]any) []videoRef {
 		if noteID == "" {
 			continue
 		}
-		out = append(out, videoRef{BVID: bvid, AID: aid, NoteID: noteID})
+		pubTime := toInt64(m["pubdate"])
+		out = append(out, videoRef{BVID: bvid, AID: aid, NoteID: noteID, PubTime: pubTime})
 	}
 	return out
 }
@@ -562,7 +600,8 @@ func extractUpVideos(data map[string]any) []videoRef {
 		if noteID == "" {
 			continue
 		}
-		out = append(out, videoRef{BVID: bvid, AID: aid, NoteID: noteID})
+		pubTime := toInt64(m["created"])
+		out = append(out, videoRef{BVID: bvid, AID: aid, NoteID: noteID, PubTime: pubTime})
 	}
 	return out
 }
