@@ -55,6 +55,11 @@ ENABLE_GET_MEDIAS: false
 #   - "123456"
 # Bilibili (search mode, optional)
 # BILI_SEARCH_MODE: "video" # video
+# BILI_QN: 80 # video quality (e.g. 80 for 1080P)
+# BILI_DATE_RANGE_START: "2023-01-01" # optional: filter by date
+# BILI_DATE_RANGE_END: "2023-12-31" # optional: filter by date
+# BILI_MAX_NOTES_PER_DAY: 10 # optional: daily limit
+# BILI_ENABLE_GET_DYNAMICS: false # optional: crawl creator dynamics in creator mode
 # Weibo (detail mode, optional)
 # WB_SPECIFIED_NOTE_URL_LIST:
 #   - "https://m.weibo.cn/status/4KjD8oZ4D"
